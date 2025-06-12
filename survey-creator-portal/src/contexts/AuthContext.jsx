@@ -5,7 +5,7 @@ import { jwtDecode } from 'jwt-decode'; // Corrected import
 export const AuthContext = createContext(); // Export AuthContext
 
 // Create an Axios instance
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
