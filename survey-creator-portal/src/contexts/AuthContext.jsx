@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await apiClient.post('/login', { username, password });
+      const response = await apiClient.post('/auth/login', { username, password });
       const { accessToken, refreshToken, tokenType } = response.data;
 
       localStorage.setItem('accessToken', accessToken);
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Optional: Call logout endpoint on the backend
-      await apiClient.post('/logout', { refreshToken: localStorage.getItem('refreshToken') });
+      await apiClient.post('/auth/logout', { refreshToken: localStorage.getItem('refreshToken') });
       console.log('Logout successful on backend');
     } catch (error) {
       console.error('Backend logout failed:', error);
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await apiClient.post('/refresh', { refreshToken: currentRefreshToken });
+      const response = await apiClient.post('/auth/refresh', { refreshToken: currentRefreshToken });
       const { token: newAccessToken, refreshToken: newRefreshToken, tokenType: newTokenType } = response.data;
 
       localStorage.setItem('accessToken', newAccessToken);
