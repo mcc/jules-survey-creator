@@ -1,11 +1,17 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { SurveyCreatorModel } from 'survey-creator-core';
-import { SurveyCreatorComponent } from 'survey-creator-react';
+import { SurveyCreatorModel  } from 'survey-creator-core';
+import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
 import { AuthContext } from '../contexts/AuthContext';
+// components/SurveyCreator.tsx
+import "survey-core/survey-core.css";
+import "survey-creator-core/survey-creator-core.css";
 
 const creatorOptions = {
+    autoSaveEnabled: true,
+    collapseOnDrag: true,
     showLogicTab: true,
     showTranslationTab: true
+
 };
 
 const defaultJson = {
@@ -17,43 +23,29 @@ const defaultJson = {
     }]
 };
 
-function SurveyJsCreatorComponent() {
-    const { token } = useContext(AuthContext);
-    const [surveyId, setSurveyId] = useState(null);
-    const [surveyMode, setSurveyMode] = useState('public');
-    const [dataClassification, setDataClassification] = useState('public');
-    const [status, setStatus] = useState('drafted');
-    const [shareWithUsername, setShareWithUsername] = useState('');
-    const [sharedUsersList, setSharedUsersList] = useState([]);
 
-    // It's important to memoize the creator instance or ensure it's stable,
-    // otherwise, useEffect might run more often than intended if creator is recreated on every render.
-    // For this example, SurveyCreatorModel is instantiated directly here.
-    // If it were part of state (useState), then it would be stable.
-    const creator = new SurveyCreatorModel(creatorOptions);
-    // creator.JSON = defaultJson; // Initial JSON set here is now handled by useEffect
+const defaultCreatorOptions = {
+  autoSaveEnabled: true,
+  collapseOnDrag: true
+};
+
+function SurveyJsCreatorComponent({ json, options }) {
+  
+  const { token } = useContext(AuthContext);
+  const [surveyId, setSurveyId] = useState(null);
+  const [surveyMode, setSurveyMode] = useState('public');
+  const [dataClassification, setDataClassification] = useState('public');
+  const [status, setStatus] = useState('drafted');
+  const [shareWithUsername, setShareWithUsername] = useState('');
+  const [sharedUsersList, setSharedUsersList] = useState([]);
+  let [creator, setCreator] = useState();
+
+  if (!creator) {
+    creator = new SurveyCreator(options || defaultCreatorOptions);
+    setCreator(creator);
+  }
 
     useEffect(() => {
-        // This effect runs when the component mounts or if creator/token changes.
-        // For now, it just loads a default "new survey" JSON.
-        // Later, this is where you'd fetch a survey by ID if one is provided (e.g., via URL params or props)
-        // const surveyIdToLoad = /* get from URL param or props later */;
-        // if (surveyIdToLoad && token) {
-        //   fetch(`/api/surveys/${surveyIdToLoad}`, { headers: { 'Authorization': `Bearer ${token}` } })
-        //     .then(res => {
-        //         if (!res.ok) throw new Error('Failed to load survey');
-        //         return res.json();
-        //     })
-        //     .then(data => {
-        //       if(data.surveyJson) creator.JSON = data.surveyJson; // Assuming surveyJson from backend is a JS object
-        //       else creator.JSON = { elements: [{ type: "text", name: "error_loading", title: "Could not load survey data." }] };
-        //     })
-        //     .catch(err => {
-        //         console.error("Error loading survey:", err);
-        //         creator.JSON = { elements: [{ type: "text", name: "error_loading", title: "Error loading survey." }] };
-        //     });
-        // } else {
-        // This branch is for creating a new survey or when no specific surveyIdToLoad is provided
         creator.JSON = { // Set default JSON for a new survey
             elements: [{
                 name: "question1",
@@ -78,21 +70,7 @@ function SurveyJsCreatorComponent() {
             setSharedUsersList([]); // Clear if no surveyId
         }
     }, [surveyId, token]); // Depends on surveyId and token (for fetchSharedUsers)
-
-    // Note on loading an existing survey (conceptual, as full loading isn't implemented in this step):
-    // If an actual survey load happens (e.g., in the main useEffect or a dedicated load function):
-    // const loadSurvey = async (surveyIdToLoad) => {
-    //   // ... fetch survey data ...
-    //   const loadedData = await surveyResponse.json();
-    //   creator.JSON = loadedData.surveyJson;
-    //   setSurveyId(loadedData.id); // This will trigger the useEffect above to call fetchSharedUsers
-    //   setSurveyMode(loadedData.surveyMode);
-    //   setDataClassification(loadedData.dataClassification);
-    //   setStatus(loadedData.status);
-    //   // No need to call fetchSharedUsers here if the useEffect above handles it based on surveyId change.
-    // };
-
-    creator.saveSurveyFunc = (saveNo, callback) => {
+creator.saveSurveyFunc = (saveNo, callback) => {
         const surveyJsonToSave = creator.JSON; // surveyJson is the SurveyJS definition
         console.log("Attempting to save survey JSON:", surveyJsonToSave);
 
@@ -285,9 +263,7 @@ function SurveyJsCreatorComponent() {
     }
   };
 
-
-    return (
-        <div>
+  return (<div>
             <div style={{ padding: '10px', backgroundColor: '#f0f0f0', marginBottom: '10px' }}>
                 <h3>Survey Settings</h3>
                 <label htmlFor="surveyIdDisplay" style={{ marginRight: '10px' }}>Survey ID: </label>
@@ -314,7 +290,7 @@ function SurveyJsCreatorComponent() {
                     <option value="expired">Expired</option>
                 </select>
             </div>
-
+            
       {/* Sharing Section */}
       {surveyId && ( // Only show sharing UI if a survey is loaded/saved
         <div style={{ padding: '10px', backgroundColor: '#e0e0e0', marginBottom: '10px' }}>
@@ -357,9 +333,12 @@ function SurveyJsCreatorComponent() {
         </div>
       )}
 
-            <SurveyCreatorComponent creator={creator} />
-        </div>
-    );
+    <div style={{ height: "100vh", width: "100%" }}>
+      <SurveyCreatorComponent creator={creator} />
+    </div>
+    </div>
+  );
 }
+
 
 export default SurveyJsCreatorComponent;
