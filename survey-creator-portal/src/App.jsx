@@ -6,7 +6,8 @@ import SideMenu from './components/SideMenu';
 import MainPanel from './components/MainPanel';
 import UserList from './components/UserList'; // Import UserList
 import Dashboard from './components/Dashboard'; // Import Dashboard
-import SurveyCreator from './components/SurveyCreator';
+// import SurveyCreator from './components/SurveyCreator';
+import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
 import { Box, CssBaseline } from '@mui/material';
 import './App.css';
 
@@ -25,7 +26,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/users" element={<UserList />} />
-          <Route path="/creator" element={<SurveyCreator />} />
+          <Route path="/creator" element={<SurveyJsCreatorComponent />} />
           <Route path="*" element={<Navigate to="/" />} /> {/* Redirect unknown paths to Dashboard */}
         </Routes>
       </MainPanel>
