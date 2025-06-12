@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, TextField, Container, Typography, Box, Alert } from '@mui/material';
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(''); // To store and display login errors
   const { login } = useAuth();
@@ -14,7 +14,7 @@ const LoginScreen = () => {
     event.preventDefault();
     setError(''); // Clear previous errors
     try {
-      await login(email, password);
+      await login(username, password);
       navigate('/dashboard'); // Redirect to dashboard on successful login
     } catch (err) {
       // Handle errors from the login function (e.g., network error, API error)
@@ -52,13 +52,13 @@ const LoginScreen = () => {
             margin="normal"
             required
             fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
-            autoComplete="email"
+            id="username"
+            label="Username"
+            name="username"
+            autoComplete="username"
             autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <TextField
             margin="normal"

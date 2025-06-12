@@ -15,40 +15,45 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check for existing token on initial load
-    const token = localStorage.getItem('jwtToken');
-    if (token) {
+    const token = localStorage.getItem('accessToken');
+    const storedRefreshToken = localStorage.getItem('refreshToken');
+    const storedTokenType = localStorage.getItem('tokenType');
+    if (token && storedTokenType) { // Ensure tokenType is also present
       try {
         const decodedToken = jwtDecode(token);
         // Check if token is expired
         if (decodedToken.exp * 1000 < Date.now()) { // Expired
-          localStorage.removeItem('jwtToken');
+          localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('tokenType');
           setUser(null); // Ensure user state is cleared
         } else {
-          setUser({ email: decodedToken.sub, ...decodedToken }); // Assuming 'sub' is email
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          setUser({ username: decodedToken.sub, ...decodedToken }); // Assuming 'sub' is username
+          apiClient.defaults.headers.common['Authorization'] = `${storedTokenType} ${token}`;
         }
       } catch (error) {
         console.error('Error decoding token on initial load:', error);
-        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('tokenType');
         setUser(null); // Ensure user state is cleared
       }
     }
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
-      const response = await apiClient.post('/login', { email, password });
-      const { token, refreshToken } = response.data;
+      const response = await apiClient.post('/login', { username, password });
+      const { accessToken, refreshToken, tokenType } = response.data;
 
-      localStorage.setItem('jwtToken', token);
+      localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('tokenType', tokenType);
 
-      const decodedToken = jwtDecode(token);
-      setUser({ email: decodedToken.sub, ...decodedToken }); // Assuming 'sub' is email
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const decodedToken = jwtDecode(accessToken);
+      setUser({ username: decodedToken.sub, ...decodedToken }); // Assuming 'sub' is username
+      apiClient.defaults.headers.common['Authorization'] = `${tokenType} ${accessToken}`;
       console.log('User logged in');
     } catch (error) {
       console.error('Login failed:', error);
@@ -66,8 +71,9 @@ export const AuthProvider = ({ children }) => {
       console.error('Backend logout failed:', error);
       // Still proceed with client-side logout
     } finally {
-      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('tokenType');
       setUser(null);
       delete apiClient.defaults.headers.common['Authorization'];
       console.log('User logged out');
@@ -84,18 +90,19 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await apiClient.post('/refresh', { refreshToken: currentRefreshToken });
-      const { token: newToken, refreshToken: newRefreshToken } = response.data; // Assuming backend might also send a new refresh token
+      const { token: newAccessToken, refreshToken: newRefreshToken, tokenType: newTokenType } = response.data;
 
-      localStorage.setItem('jwtToken', newToken);
-      if (newRefreshToken) { // If backend provides a new refresh token, store it
+      localStorage.setItem('accessToken', newAccessToken);
+      if (newRefreshToken) {
         localStorage.setItem('refreshToken', newRefreshToken);
       }
+      localStorage.setItem('tokenType', newTokenType);
 
-      const decodedToken = jwtDecode(newToken);
-      setUser({ email: decodedToken.sub, ...decodedToken });
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      const decodedToken = jwtDecode(newAccessToken);
+      setUser({ username: decodedToken.sub, ...decodedToken });
+      apiClient.defaults.headers.common['Authorization'] = `${newTokenType} ${newAccessToken}`;
       console.log('Token refreshed');
-      return newToken;
+      return newAccessToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
       await logout(); // Logout user if refresh fails
@@ -119,9 +126,10 @@ export const AuthProvider = ({ children }) => {
           try {
             console.log('Attempting to refresh token due to 401 on other request...');
             const newToken = await refreshToken();
+            const tokenType = localStorage.getItem('tokenType');
             // Update the header for the original request
-            apiClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`; // Also update apiClient instance for future
-            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+            apiClient.defaults.headers.common['Authorization'] = `${tokenType} ${newToken}`; // Also update apiClient instance for future
+            originalRequest.headers['Authorization'] = `${tokenType} ${newToken}`;
             return apiClient(originalRequest); // Retry the original request
           } catch (refreshError) {
             console.error('Failed to refresh token after 401 (interceptor):', refreshError);
