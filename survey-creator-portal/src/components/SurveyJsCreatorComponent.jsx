@@ -2,8 +2,6 @@ import React, { useContext, useEffect, useState } from 'react';
 import { SurveyCreatorModel } from 'survey-creator-core';
 import { SurveyCreatorComponent } from 'survey-creator-react';
 import { AuthContext } from '../contexts/AuthContext';
-import 'survey-core/defaultV2.min.css';
-import 'survey-creator-core/survey-creator-core.min.css';
 
 const creatorOptions = {
     showLogicTab: true,
