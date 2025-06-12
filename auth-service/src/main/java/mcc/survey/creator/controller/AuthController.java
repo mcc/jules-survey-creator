@@ -17,15 +17,17 @@ import org.springframework.security.core.Authentication;
         import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
-public class AuthController {
+@RequestMapping("/api/auth") // Base path for auth related endpoints
+public class AuthController { // Renaming to UserController or creating a new one might be better for non-auth user ops
 
     @Autowired
     AuthenticationManager authenticationManager;
@@ -113,5 +115,32 @@ public class AuthController {
         // For this example, we'll just return a success message.
         SecurityContextHolder.clearContext(); // Clear server-side security context
         return ResponseEntity.ok("User logged out successfully!");
+    }
+
+    // Simple DTO for returning basic user info
+    static class UserSummaryDTO {
+        private Long id;
+        private String username;
+
+        public UserSummaryDTO(Long id, String username) {
+            this.id = id;
+            this.username = username;
+        }
+
+        // Getters
+        public Long getId() { return id; }
+        public String getUsername() { return username; }
+    }
+
+    @GetMapping("/users/by-username/{username}") // Changed path to be under /api/auth/users for now
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            return ResponseEntity.ok(new UserSummaryDTO(user.getId(), user.getUsername()));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
     }
 }
