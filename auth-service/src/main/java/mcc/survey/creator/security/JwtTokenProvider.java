@@ -5,6 +5,8 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,7 +24,7 @@ import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenProvider {
-
+    private Logger logger = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider.class);
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
@@ -104,6 +106,7 @@ public class JwtTokenProvider {
         UserDetails userDetails = userDetailsService.loadUserByUsername(getUsernameFromJWT(token));
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         List<String> roles = claims.get("roles", List.class);
+        logger.info("User roles: " + String.join(",", roles));
         Set<GrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toSet());

@@ -1,4 +1,4 @@
-package mcc.survey.creator.config;
+/* package mcc.survey.creator.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -26,3 +26,4 @@ public class WebConfig {
         };
     }
 }
+*/

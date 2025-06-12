@@ -72,7 +72,7 @@ public class UserService {
                 }
             });
         } else {
-            roles.add(Role.ROLE_USER); // Make sure Role.ROLE_USER exists
+            roles.add(Role.USER); // Make sure Role.ROLE_USER exists
         }
         user.setRoles(roles);
 

@@ -41,7 +41,7 @@ const SideMenu = () => {
             </ListItemIcon>
             <ListItemText primary="Dashboard" />
           </ListItemButton>
-          <ListItemButton component={RouterLink} to="/users">
+          <ListItemButton component={RouterLink} to="/admin/users">
             <ListItemIcon>
               <PeopleIcon />
             </ListItemIcon>
