@@ -1,15 +1,32 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Button, TextField, Container, Typography, Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { Button, TextField, Container, Typography, Box, Alert } from '@mui/material';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(''); // To store and display login errors
   const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    login(email, password);
+    setError(''); // Clear previous errors
+    try {
+      await login(email, password);
+      navigate('/dashboard'); // Redirect to dashboard on successful login
+    } catch (err) {
+      // Handle errors from the login function (e.g., network error, API error)
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Login failed. Please try again.');
+      }
+      console.error('Login failed:', err);
+    }
   };
 
   return (
@@ -26,6 +43,11 @@ const LoginScreen = () => {
           Login
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          {error && (
+            <Alert severity="error" sx={{ width: '100%', mt: 2 }}>
+              {error}
+            </Alert>
+          )}
           <TextField
             margin="normal"
             required
