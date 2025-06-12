@@ -66,9 +66,9 @@ function SurveyJsCreatorComponent() {
         setSurveyMode('public');
         setDataClassification('public');
         setStatus('drafted');
-    setSharedUsersList([]); // Reset shared users list for a new survey
+        setSharedUsersList([]); // Reset shared users list for a new survey
         // }
-  }, [creator, token]); // Initial setup effect
+    }, [creator, token]); // Initial setup effect
 
     // Effect to fetch shared users when surveyId changes (e.g., after load or new save)
     useEffect(() => {

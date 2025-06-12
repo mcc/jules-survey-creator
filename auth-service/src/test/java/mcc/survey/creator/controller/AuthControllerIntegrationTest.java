@@ -52,7 +52,7 @@ public class AuthControllerIntegrationTest {
         signUpRequest.setUsername("testuser");
         signUpRequest.setPassword("password123");
         Set<String> roles = new HashSet<>();
-        roles.add("USER");
+        roles.add("ROLE_USER");
         signUpRequest.setRoles(roles);
 
         mockMvc.perform(post("/api/auth/signup")
@@ -70,7 +70,7 @@ public class AuthControllerIntegrationTest {
         User existingUser = new User();
         existingUser.setUsername("existinguser");
         existingUser.setPassword(passwordEncoder.encode("password"));
-        existingUser.setRoles(Collections.singleton(Role.USER));
+        existingUser.setRoles(Collections.singleton(Role.ROLE_USER));
         userRepository.save(existingUser);
 
         SignUpRequest signUpRequest = new SignUpRequest();
@@ -91,14 +91,14 @@ public class AuthControllerIntegrationTest {
         signUpRequest.setUsername("loginuser");
         signUpRequest.setPassword("password123");
         Set<String> roles = new HashSet<>();
-        roles.add("USER");
+        roles.add("ROLE_USER");
         signUpRequest.setRoles(roles);
 
         // No need to use mockMvc for setup if using repository directly
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        user.setRoles(Collections.singleton(Role.USER));
+        user.setRoles(Collections.singleton(Role.ROLE_USER));
         userRepository.save(user);
 
 

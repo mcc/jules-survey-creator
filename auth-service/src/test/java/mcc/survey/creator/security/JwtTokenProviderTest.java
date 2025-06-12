@@ -48,7 +48,7 @@ public class JwtTokenProviderTest {
 
     @Test
     void generateToken_shouldCreateValidToken() {
-        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(Role.USER.name()));
+        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(Role.ROLE_USER.name()));
         Authentication authentication = new UsernamePasswordAuthenticationToken("testuser", null, authorities);
 
         String token = jwtTokenProvider.generateToken(authentication);
@@ -66,7 +66,7 @@ public class JwtTokenProviderTest {
 
     @Test
     void validateToken_shouldReturnTrueForValidToken() {
-        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(Role.USER.name()));
+        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(Role.ROLE_USER.name()));
         Authentication authentication = new UsernamePasswordAuthenticationToken("testuser", null, authorities);
         String token = jwtTokenProvider.generateToken(authentication);
 
@@ -79,7 +79,7 @@ public class JwtTokenProviderTest {
         assertEquals("testuser", auth.getName());
         assertTrue(auth.getAuthorities().stream()
                 .map(ga -> ga.getAuthority())
-                .collect(Collectors.toList()).contains(Role.USER.name()));
+                .collect(Collectors.toList()).contains(Role.ROLE_USER.name()));
     }
 
     @Test
@@ -88,7 +88,7 @@ public class JwtTokenProviderTest {
          // No need to call init() again if the key itself doesn't change, only expiration.
          // However, if key generation depends on expiration time (it doesn't here), it would be needed.
 
-        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(Role.USER.name()));
+        Set<SimpleGrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority(Role.ROLE_USER.name()));
         Authentication authentication = new UsernamePasswordAuthenticationToken("testuser", null, authorities);
         String token = jwtTokenProvider.generateToken(authentication);
 
