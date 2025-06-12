@@ -68,7 +68,7 @@ describe('LoginScreen', () => {
       { route: '/login'}
     );
 
-    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
@@ -82,11 +82,11 @@ describe('LoginScreen', () => {
       { route: '/login'}
     );
 
-    const emailInput = screen.getByLabelText(/email address/i);
+    const usernameInput = screen.getByLabelText(/username/i);
     const passwordInput = screen.getByLabelText(/password/i);
 
-    await user.type(emailInput, 'test@example.com');
-    expect(emailInput.value).toBe('test@example.com');
+    await user.type(usernameInput, 'test@example.com');
+    expect(usernameInput.value).toBe('test@example.com');
 
     await user.type(passwordInput, 'password123');
     expect(passwordInput.value).toBe('password123');
@@ -104,7 +104,7 @@ describe('LoginScreen', () => {
       { route: '/login'}
     );
 
-    await user.type(screen.getByLabelText(/email address/i), 'test@example.com');
+    await user.type(screen.getByLabelText(/username/i), 'test@example.com');
     await user.type(screen.getByLabelText(/password/i), 'password');
     await user.click(screen.getByRole('button', { name: /login/i }));
 
@@ -133,7 +133,7 @@ describe('LoginScreen', () => {
       { route: '/login'}
     );
 
-    await user.type(screen.getByLabelText(/email address/i), 'wrong@example.com');
+    await user.type(screen.getByLabelText(/username/i), 'wrong@example.com');
     await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
     await user.click(screen.getByRole('button', { name: /login/i }));
 
@@ -157,7 +157,7 @@ describe('LoginScreen', () => {
       { route: '/login'}
     );
 
-    await user.type(screen.getByLabelText(/email address/i), 'test@example.com');
+    await user.type(screen.getByLabelText(/username/i), 'test@example.com');
     await user.type(screen.getByLabelText(/password/i), 'password');
     await user.click(screen.getByRole('button', { name: /login/i }));
 
@@ -182,7 +182,7 @@ describe('LoginScreen', () => {
     );
 
     // First attempt (fails)
-    await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
+    await user.type(screen.getByLabelText(/username/i), 'user@example.com');
     await user.type(screen.getByLabelText(/password/i), 'pass');
     await user.click(screen.getByRole('button', { name: /login/i }));
 

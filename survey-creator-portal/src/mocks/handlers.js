@@ -13,22 +13,24 @@ const createMockJwt = (payload, expiresInMs = 3600 * 1000) => {
 export const handlers = [
   // Login Handler
   http.post(`${baseURL}/login`, async ({ request }) => {
-    const { email, password } = await request.json();
+    const { username, password } = await request.json(); // Changed email to username
 
-    if (email === 'test@example.com' && password === 'password') {
-      const accessToken = createMockJwt({ sub: email, roles: ['USER'] }, 5 * 60 * 1000); // 5 min expiry
-      const refreshToken = createMockJwt({ sub: email, type: 'REFRESH' }, 7 * 24 * 60 * 60 * 1000); // 7 days expiry
+    if (username === 'test@example.com' && password === 'password') {
+      const mockAccessToken = createMockJwt({ sub: username, roles: ['USER'] }, 5 * 60 * 1000);
+      const mockRefreshToken = createMockJwt({ sub: username, type: 'REFRESH' }, 7 * 24 * 60 * 60 * 1000);
       return HttpResponse.json({
-        token: accessToken,
-        refreshToken: refreshToken,
+        accessToken: mockAccessToken, // Changed token to accessToken
+        refreshToken: mockRefreshToken,
+        tokenType: 'Bearer',
       });
-    } else if (email === 'expired@example.com' && password === 'password') {
+    } else if (username === 'expired@example.com' && password === 'password') {
         // For testing token expiry and refresh
-        const accessToken = createMockJwt({ sub: email, roles: ['USER'] }, -5 * 60 * 1000); // Expired 5 mins ago
-        const refreshToken = createMockJwt({ sub: email, type: 'REFRESH' }, 7 * 24 * 60 * 60 * 1000);
+        const mockAccessToken = createMockJwt({ sub: username, roles: ['USER'] }, -5 * 60 * 1000); // Expired 5 mins ago
+        const mockRefreshToken = createMockJwt({ sub: username, type: 'REFRESH' }, 7 * 24 * 60 * 60 * 1000);
         return HttpResponse.json({
-            token: accessToken,
-            refreshToken: refreshToken,
+            accessToken: mockAccessToken, // Changed token to accessToken
+            refreshToken: mockRefreshToken,
+            tokenType: 'Bearer',
         });
     }
     return new HttpResponse(JSON.stringify({ message: 'Invalid credentials' }), {
@@ -72,22 +74,24 @@ export const handlers = [
     }
 
     try {
-        // "Decode" the mock refresh token to get the subject (email)
+        // "Decode" the mock refresh token to get the subject (username)
         const payloadPart = refreshToken.split('.')[1];
         const decodedPayload = JSON.parse(atob(payloadPart));
-        const email = decodedPayload.sub;
+        const username = decodedPayload.sub; // Changed email to username
 
-        if (!email) {
+        if (!username) { // Changed email to username
             throw new Error("Invalid mock refresh token payload");
         }
 
-        const newAccessToken = createMockJwt({ sub: email, roles: ['USER'] }, 5 * 60 * 1000);
-        // Optionally, issue a new refresh token
-        // const newRefreshToken = createMockJwt({ sub: email, type: 'REFRESH' }, 7 * 24 * 60 * 60 * 1000);
+        const newAccessToken = createMockJwt({ sub: username, roles: ['USER'] }, 5 * 60 * 1000);
+        // Optionally, issue a new refresh token, though current AuthContext doesn't expect 'newMockRefreshToken' from this specific key
+        const newMockRefreshToken = createMockJwt({ sub: username, type: 'REFRESH' }, 7 * 24 * 60 * 60 * 1000);
+
 
         return HttpResponse.json({
-            token: newAccessToken,
-            // refreshToken: newRefreshToken, // Uncomment if your backend rotates refresh tokens
+            token: newAccessToken, // This is the key AuthContext expects for the new access token
+            refreshToken: newMockRefreshToken, // Include if backend sends it and AuthContext should handle it
+            tokenType: 'Bearer',
         });
 
     } catch(e) {
