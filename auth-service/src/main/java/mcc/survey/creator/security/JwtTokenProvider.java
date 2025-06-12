@@ -1,0 +1,120 @@
+package mcc.survey.creator.security;
+
+import mcc.survey.creator.model.Role;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.stereotype.Component;
+
+import java.security.Key;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Component
+public class JwtTokenProvider {
+
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${app.jwt.expiration-ms}")
+    private long jwtExpirationMs;
+
+    @Value("${app.jwt.refresh-token-expiration-ms}")
+    private long refreshTokenExpirationMs;
+
+    private Key key;
+
+    private final UserDetailsService userDetailsService;
+
+    public JwtTokenProvider(UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
+
+    @PostConstruct
+    protected void init() {
+        key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    }
+
+    public String generateToken(Authentication authentication) {
+        String username = authentication.getName();
+        Set<String> roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("roles", roles)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public String generateRefreshToken(Authentication authentication) {
+        String username = authentication.getName();
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshTokenExpirationMs);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public String getUsernameFromJWT(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getSubject();
+    }
+
+    public boolean validateToken(String authToken) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(authToken);
+            return true;
+        } catch (MalformedJwtException ex) {
+            // Log error
+        } catch (ExpiredJwtException ex) {
+            // Log error
+        } catch (UnsupportedJwtException ex) {
+            // Log error
+        } catch (IllegalArgumentException ex) {
+            // Log error
+        }
+        return false;
+    }
+
+    public Authentication getAuthentication(String token) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(getUsernameFromJWT(token));
+        Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        List<String> roles = claims.get("roles", List.class);
+        Set<GrantedAuthority> authorities = roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toSet());
+        return new UsernamePasswordAuthenticationToken(userDetails, "", authorities);
+    }
+
+    public String resolveToken(HttpServletRequest req) {
+        String bearerToken = req.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+}
