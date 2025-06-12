@@ -6,7 +6,7 @@ export const AuthContext = createContext(); // Export AuthContext
 
 // Create an Axios instance
 const apiClient = axios.create({
-  baseURL: '/api/auth', // Assuming your Spring Boot app is served from the same domain
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
 export const AuthProvider = ({ children }) => {
