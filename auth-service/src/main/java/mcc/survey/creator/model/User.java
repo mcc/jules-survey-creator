@@ -1,6 +1,9 @@
 package mcc.survey.creator.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,6 +19,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @NotBlank
+    @Size(max = 50)
+    @Email
+    @Column(unique = true, nullable = false)
+    private String email;
+
     @Column(nullable = false)
     private String password;
 
@@ -30,6 +39,9 @@ public class User {
 
     @ManyToMany(mappedBy = "sharedWithUsers", fetch = FetchType.LAZY)
     private Set<Survey> sharedSurveys = new HashSet<>();
+
+    @Column(nullable = false)
+    private boolean isActive = true;
 
     // Getters and setters
     public Long getId() {
@@ -78,5 +90,21 @@ public class User {
 
     public void setSharedSurveys(Set<Survey> sharedSurveys) {
         this.sharedSurveys = sharedSurveys;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

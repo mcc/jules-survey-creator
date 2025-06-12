@@ -53,7 +53,7 @@ const LoginScreen = () => {
             required
             fullWidth
             id="username"
-            label="Username"
+            label="Name"
             name="username"
             autoComplete="username"
             autoFocus

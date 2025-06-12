@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divider, Box } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
+import PostAddIcon from '@mui/icons-material/PostAdd'; // Added for Survey Creator
 import LogoutIcon from '@mui/icons-material/Logout';
 
 const drawerWidth = 240;
@@ -45,6 +46,12 @@ const SideMenu = () => {
               <PeopleIcon />
             </ListItemIcon>
             <ListItemText primary="Users" />
+          </ListItemButton>
+          <ListItemButton component={RouterLink} to="/survey-creator">
+            <ListItemIcon>
+              <PostAddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Survey Creator" />
           </ListItemButton>
         </List>
       </Box>
