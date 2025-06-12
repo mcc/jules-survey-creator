@@ -41,6 +41,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/login", "/api/auth/signup", "/api/auth/refresh").permitAll() // Specific public auth endpoints
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // Secure admin endpoints
                 .requestMatchers("/api/auth/users/**").authenticated() // Secure user-specific info under /api/auth/users
                 .requestMatchers("/api/surveys/**").authenticated() // Surveys endpoints require authentication
                 .requestMatchers("/h2-console/**").permitAll() // Allow H2 console
