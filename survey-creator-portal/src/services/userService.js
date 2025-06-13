@@ -31,3 +31,7 @@ export const activateUser = (userId) => {
 export const inactivateUser = (userId) => {
   return setUserStatus(userId, false);
 };
+
+export const getRoles = () => {
+  return apiClient.get('/admin/roles').then(response => response.data);
+};
