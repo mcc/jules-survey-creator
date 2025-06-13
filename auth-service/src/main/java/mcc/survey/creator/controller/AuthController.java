@@ -2,14 +2,23 @@ package mcc.survey.creator.controller;
 
 import mcc.survey.creator.dto.JwtResponse;
 import mcc.survey.creator.dto.LoginRequest;
+<<<<<<< feat/forgot-password
+import mcc.survey.creator.dto.*; // Import all DTOs
+=======
 import mcc.survey.creator.dto.RefreshTokenRequest;
 import mcc.survey.creator.dto.SignUpRequest;
 import mcc.survey.creator.dto.ChangePasswordRequest; // Added import
+>>>>>>> main
 import mcc.survey.creator.model.Role;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
+<<<<<<< feat/forgot-password
+import mcc.survey.creator.service.UserService; // Import UserService
+import mcc.survey.creator.util.ResourceNotFoundException; // Import ResourceNotFoundException
+=======
 import mcc.survey.creator.service.UserService; // Added import
+>>>>>>> main
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,7 +53,11 @@ public class AuthController { // Renaming to UserController or creating a new on
     JwtTokenProvider jwtTokenProvider;
 
     @Autowired
+<<<<<<< feat/forgot-password
+    private UserService userService; // Inject UserService
+=======
     private UserService userService; // Added UserService injection
+>>>>>>> main
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -149,6 +162,40 @@ public class AuthController { // Renaming to UserController or creating a new on
         }
     }
 
+<<<<<<< feat/forgot-password
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
+        try {
+            userService.initiatePasswordReset(request.getEmail());
+            return ResponseEntity.ok("Password reset email sent. Please check your inbox.");
+        } catch (ResourceNotFoundException e) {
+            // Even if user is not found, we might want to return a generic success message
+            // to prevent email enumeration attacks.
+            // However, the current userService.initiatePasswordReset logs and returns void if not found.
+            // For more explicit client feedback (and if not concerned about enumeration):
+            // return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.ok("If your email is registered, you will receive a password reset link.");
+        } catch (Exception e) {
+            // Log the exception e
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error initiating password reset.");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto request) {
+        if (request.getToken() == null || request.getToken().isEmpty() ||
+            request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
+            return ResponseEntity.badRequest().body("Token and new password must be provided.");
+        }
+
+        boolean result = userService.completePasswordReset(request.getToken(), request.getNewPassword());
+
+        if (result) {
+            return ResponseEntity.ok("Password has been reset successfully.");
+        } else {
+            // More specific errors could be returned from the service layer if needed
+            return ResponseEntity.badRequest().body("Invalid or expired token, or password could not be reset.");
+=======
     // Add this method to AuthController.java
     @PostMapping("/users/change-password")
     @PreAuthorize("isAuthenticated()")
@@ -181,6 +228,7 @@ public class AuthController { // Renaming to UserController or creating a new on
             }
             // Generic error for other runtime exceptions
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: An unexpected error occurred while changing password.");
+>>>>>>> main
         }
     }
 }
