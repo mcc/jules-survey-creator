@@ -1,5 +1,6 @@
 import React from 'react';
 import { Typography, Paper, Box } from '@mui/material';
+import SurveyList from './SurveyList.jsx';
 
 const Dashboard = () => {
   return (
