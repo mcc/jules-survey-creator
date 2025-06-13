@@ -2,6 +2,7 @@ package mcc.survey.creator.controller;
 
 import mcc.survey.creator.dto.JwtResponse;
 import mcc.survey.creator.dto.LoginRequest;
+import mcc.survey.creator.dto.MessageResponseDto; // Added import
 import mcc.survey.creator.dto.*; // Import all DTOs
 import mcc.survey.creator.model.Role;
 import mcc.survey.creator.dto.ChangePasswordRequest; // New DTO
@@ -166,38 +167,6 @@ public class AuthController { // Renaming to UserController or creating a new on
         }
     }
 
-    @PostMapping("/change-password")
-    @PreAuthorize("isAuthenticated()") // Ensure user is authenticated
-    public ResponseEntity<?> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username;
-        if (authentication.getPrincipal() instanceof UserDetails) {
-            username = ((UserDetails) authentication.getPrincipal()).getUsername();
-        } else {
-            username = authentication.getPrincipal().toString();
-        }
-
-        try {
-            userService.changePassword(
-                username,
-                changePasswordRequest.getOldPassword(),
-                changePasswordRequest.getNewPassword()
-            );
-            return ResponseEntity.ok("Password changed successfully.");
-        } catch (IllegalArgumentException e) {
-            // Handle validation errors, e.g., empty new password
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        } catch (RuntimeException e) {
-            // Handle user not found or invalid current password
-            if (e.getMessage().toLowerCase().contains("user not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
-            } else if (e.getMessage().toLowerCase().contains("invalid current password")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: An unexpected error occurred while changing password.");
-        }
-    }
-  
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
         try {
@@ -232,38 +201,45 @@ public class AuthController { // Renaming to UserController or creating a new on
             return ResponseEntity.badRequest().body("Invalid or expired token, or password could not be reset.");
         }
     }
-  
+
+    // Ensure this is the version of changePassword to keep.
+    // It is mapped to /api/auth/users/change-password
+    // It calls the userService.changePassword variant that takes three arguments (username, oldPassword, newPassword)
+    // And is designed to throw exceptions for specific error conditions.
     @PostMapping("/users/change-password")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest, Authentication authentication) {
+    public ResponseEntity<?> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest, Authentication authentication) { // Added @Valid
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: User is not authenticated.");
         }
         String username = authentication.getName();
 
-        try {
-            if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isEmpty()) {
-                return ResponseEntity.badRequest().body("Error: New password cannot be empty.");
-            }
-            // Consider adding more validation for newPassword if needed (e.g. length, complexity)
-            // though some of this might be better handled in the service layer or via validation annotations on the DTO.
-
-            userService.changePassword(username, changePasswordRequest.getOldPassword(), changePasswordRequest.getNewPassword());
-            return ResponseEntity.ok("Password changed successfully.");
-        } catch (IllegalArgumentException e) {
-            // This catches specific validation errors like empty new password from service
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        } catch (RuntimeException e) {
-            // This catches user not found or invalid current password from service
-            // Log the exception server-side for more details
-            // log.error("Error changing password for user {}: {}", username, e.getMessage()); // Make sure to have a logger if you use this
-            if (e.getMessage().toLowerCase().contains("user not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
-            } else if (e.getMessage().toLowerCase().contains("invalid current password")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
-            }
-            // Generic error for other runtime exceptions
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: An unexpected error occurred while changing password.");
+        // The @Valid annotation on ChangePasswordRequest should handle cases like empty newPassword
+        // if the DTO has appropriate validation annotations (e.g., @NotEmpty, @Size).
+        // If ChangePasswordRequest DTO doesn't have such annotations, the explicit null/empty check can remain,
+        // or preferably, add validation annotations to the DTO.
+        // For now, assuming @Valid might not cover all desired checks or DTO is not yet annotated for this.
+        if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isEmpty()) {
+             return ResponseEntity.badRequest().body("Error: New password cannot be empty.");
         }
+        // Example of an additional check (can be removed if DTO validation is comprehensive)
+        // if (changePasswordRequest.getOldPassword() == null || changePasswordRequest.getOldPassword().isEmpty()) {
+        //     return ResponseEntity.badRequest().body("Error: Old password cannot be empty.");
+        // }
+
+        try {
+            userService.changePassword(username, changePasswordRequest.getOldPassword(), changePasswordRequest.getNewPassword());
+            return ResponseEntity.ok(new MessageResponseDto("Password changed successfully.")); // Using a DTO for response consistency
+        } catch (ResourceNotFoundException e) { // Catching specific expected exceptions
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponseDto("Error: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new MessageResponseDto("Error: " + e.getMessage()));
+        } catch (RuntimeException e) { // Catch-all for other unexpected runtime exceptions
+            // Log the exception server-side for more details
+            // log.error("Error changing password for user {}: {}", username, e.getMessage(), e); // Example logging
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponseDto("Error: An unexpected error occurred while changing password."));
+        }
+      
+      
     }
 }

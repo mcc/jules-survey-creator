@@ -1,5 +1,6 @@
 package mcc.survey.creator.service;
 
+import mcc.survey.creator.util.PasswordPolicyValidator; // Added import
 import mcc.survey.creator.dto.CreateUserRequest;
 import mcc.survey.creator.dto.EditUserRequest;
 import mcc.survey.creator.model.User;
@@ -141,18 +142,46 @@ public class UserService {
     }
 
     @Transactional
-    public boolean resetPassword(String username) {
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (!userOptional.isPresent()) {
+            log.warn("User not found for password change: {}", username);
+            return false; // Or throw exception
+        }
+        User user = userOptional.get();
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            log.warn("Old password does not match for user: {}", username);
+            return false; // Or throw exception indicating incorrect old password
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        // IMPORTANT: Update the password expiration date upon successful password change
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
+        userRepository.save(user);
+        log.info("Password changed successfully for user: {}", username);
+        return true;
+    }
+
+    @Transactional
+    public boolean resetPassword(String username, String newPassword) { // Signature changed
+        try {
+            PasswordPolicyValidator.validate(newPassword);
+        } catch (IllegalArgumentException e) {
+            log.warn("Admin password reset for user {} failed due to weak password: {}", username, e.getMessage());
+            return false; // Password policy violated
+        }
+    
         return userRepository.findByUsername(username).map(user -> {
-            String newPassword = generateRandomPassword();
             user.setPassword(passwordEncoder.encode(newPassword));
-            user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
+            user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Reset expiration date
             userRepository.save(user);
-            log.info("Reset password for user: {}. New password: {}", username, newPassword);
-            // Again, logging passwords is risky.
+            log.info("Admin successfully reset password for user: {}", username);
+            // DO NOT log the newPassword itself
             return true;
         }).orElseGet(() -> {
-            log.warn("User not found for password reset: {}", username);
-            return false;
+            log.warn("User not found for admin password reset: {}", username);
+            return false; // User not found
         });
     }
                      
@@ -190,16 +219,20 @@ public class UserService {
 
         if (passwordResetTokenService.isTokenExpired(user.getResetPasswordTokenExpiry())) {
             log.warn("Expired password reset token used for user: {}", user.getUsername());
-            // Optionally, clear the token anyway
-            // user.setResetPasswordToken(null);
-            // user.setResetPasswordTokenExpiry(null);
-            // userRepository.save(user);
             return false;
         }
 
+        try {
+            PasswordPolicyValidator.validate(newPassword);
+        } catch (IllegalArgumentException e) {
+            log.warn("Password reset for user {} via token {} failed due to weak password: {}", user.getUsername(), token, e.getMessage());
+            // Do not clear token here, allow user to try again with a stronger password if token still valid
+            return false; // Password policy violated
+        }
+
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setResetPasswordToken(null);
-        user.setResetPasswordTokenExpiry(null);
+        user.setResetPasswordToken(null); // Clear token after successful reset
+        user.setResetPasswordTokenExpiry(null); // Clear token expiry
         userRepository.save(user);
 
         log.info("Password successfully reset for user: {}", user.getUsername());
@@ -265,10 +298,9 @@ public class UserService {
             throw new IllegalArgumentException("New password cannot be empty.");
         }
 
-        // Optional: Add password complexity rules here if needed
-        // e.g., if (newPassword.length() < 8) throw new IllegalArgumentException("Password too short");
+        // Validate new password against policy
+        PasswordPolicyValidator.validate(newPassword); // Throws IllegalArgumentException if policy violated
         user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
-        
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 

@@ -151,16 +151,36 @@ class UserServiceTest {
     }
 
     @Test
-    void changePassword_Success() {
+    void changePassword_Success_ValidNewPassword() { // Renamed for clarity
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
-        when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
+        // Ensure the mock for passwordEncoder.matches uses the actual user's current encoded password
+        when(passwordEncoder.matches("oldPassword", testUser.getPassword())).thenReturn(true);
+        when(passwordEncoder.encode("ValidNewP@ss1")).thenReturn("encodedValidNewPassword");
 
-        userService.changePassword("testuser", "oldPassword", "newPassword");
+        // This call should not throw an exception
+        assertDoesNotThrow(() -> {
+            userService.changePassword("testuser", "oldPassword", "ValidNewP@ss1");
+        });
 
-        verify(passwordEncoder).encode("newPassword");
-        assertEquals("encodedNewPassword", testUser.getPassword());
+        verify(passwordEncoder).encode("ValidNewP@ss1");
+        assertEquals("encodedValidNewPassword", testUser.getPassword());
+        assertNotNull(testUser.getPasswordExpirationDate()); // Check if expiration date is set
         verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void changePassword_InvalidNewPassword_ViolatesPolicy() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPassword", testUser.getPassword())).thenReturn(true);
+
+        // Expect IllegalArgumentException from PasswordPolicyValidator
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.changePassword("testuser", "oldPassword", "invalid"); // "invalid" violates policy
+        });
+        assertTrue(exception.getMessage().startsWith("Password policy violated:"));
+
+        verify(passwordEncoder, never()).encode(anyString()); // Encode should not be called
+        verify(userRepository, never()).save(any(User.class)); // Save should not be called
     }
 
     @Test
@@ -198,11 +218,96 @@ class UserServiceTest {
     @Test
     void changePassword_NewPasswordIsNull() {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
+        when(passwordEncoder.matches("oldPassword", testUser.getPassword())).thenReturn(true);
 
+        // This will now be caught by PasswordPolicyValidator first if it checks for null.
+        // If PasswordPolicyValidator allows null and UserService has its own check, that would be different.
+        // Assuming PasswordPolicyValidator throws for null.
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             userService.changePassword("testuser", "oldPassword", null);
         });
-        assertEquals("New password cannot be empty.", exception.getMessage());
+        // The message comes from PasswordPolicyValidator's check for null.
+        assertEquals("Password cannot be null.", exception.getMessage());
+    }
+
+    // Tests for completePasswordReset with password policy validation
+
+    @Test
+    void completePasswordReset_validToken_ValidNewPassword() { // Renamed for clarity
+        testUser.setResetPasswordToken("validToken");
+        testUser.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(1));
+
+        when(userRepository.findByResetPasswordToken("validToken")).thenReturn(Optional.of(testUser));
+        when(passwordResetTokenService.isTokenExpired(any(LocalDateTime.class))).thenReturn(false);
+        when(passwordEncoder.encode("ValidNewP@ss1")).thenReturn("encodedValidNewPassword");
+
+        boolean result = userService.completePasswordReset("validToken", "ValidNewP@ss1");
+
+        assertTrue(result);
+        assertEquals("encodedValidNewPassword", testUser.getPassword());
+        assertNull(testUser.getResetPasswordToken());
+        assertNull(testUser.getResetPasswordTokenExpiry());
+        assertNotNull(testUser.getPasswordExpirationDate()); // Check if expiration date is set
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void completePasswordReset_validToken_InvalidNewPassword_ViolatesPolicy() {
+        testUser.setResetPasswordToken("validToken");
+        testUser.setResetPasswordTokenExpiry(LocalDateTime.now().plusHours(1));
+
+        when(userRepository.findByResetPasswordToken("validToken")).thenReturn(Optional.of(testUser));
+        when(passwordResetTokenService.isTokenExpired(any(LocalDateTime.class))).thenReturn(false);
+        // passwordEncoder.encode will not be called if policy validation fails
+
+        boolean result = userService.completePasswordReset("validToken", "invalid"); // "invalid" violates policy
+
+        assertFalse(result); // Method should return false as exception is caught
+        assertEquals("encodedPassword", testUser.getPassword()); // Password should not change
+        assertNotNull(testUser.getResetPasswordToken()); // Token should not be cleared on policy failure
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    // Tests for admin resetPassword with password policy validation
+    // Existing UserService has `resetPassword(String username)` which generates password.
+    // This needs to be updated to `resetPassword(String username, String newPassword)` first.
+    // Assuming it has been updated as per previous subtask.
+
+    @Test
+    void adminResetPassword_userFound_ValidNewPassword() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.encode("ValidNewP@ss1")).thenReturn("encodedValidNewPasswordByAdmin");
+
+        boolean result = userService.resetPassword("testuser", "ValidNewP@ss1");
+
+        assertTrue(result);
+        assertEquals("encodedValidNewPasswordByAdmin", testUser.getPassword());
+        assertNotNull(testUser.getPasswordExpirationDate()); // Check if expiration date is set
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void adminResetPassword_userFound_InvalidNewPassword_ViolatesPolicy() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        // passwordEncoder.encode will not be called
+
+        boolean result = userService.resetPassword("testuser", "invalid"); // "invalid" violates policy
+
+        assertFalse(result); // Method should return false
+        assertEquals("encodedPassword", testUser.getPassword()); // Password should not change
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void adminResetPassword_userNotFound() {
+        when(userRepository.findByUsername("unknownuser")).thenReturn(Optional.empty());
+
+        boolean result = userService.resetPassword("unknownuser", "ValidNewP@ss1");
+
+        assertFalse(result);
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
     }
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { Button, TextField, Container, Typography, Box, Alert } from '@mui/material';
+import { useNavigate, Link as RouterLink } from 'react-router-dom'; // Import Link
+import { Button, TextField, Container, Typography, Box, Alert, Grid } from '@mui/material'; // Import Grid for layout
 
 const LoginScreen = () => {
   const [username, setUsername] = useState('');
@@ -81,6 +81,13 @@ const LoginScreen = () => {
           >
             Login
           </Button>
+          <Grid container justifyContent="flex-end">
+            <Grid item>
+              <RouterLink to="/forgot-password" variant="body2">
+                Forgot password?
+              </RouterLink>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
     </Container>
