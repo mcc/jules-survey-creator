@@ -48,9 +48,15 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(Authentication authentication) {
+        logger.info("Generating JWT token for user: " + authentication.getName());
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalArgumentException("Authentication object is null or not authenticated");
+        }
         String username = authentication.getName();
         Set<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+        authentication.getAuthorities().stream()
                 .collect(Collectors.toSet());
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
@@ -90,19 +96,15 @@ public class JwtTokenProvider {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(authToken);
             return true;
-        } catch (MalformedJwtException ex) {
+        } catch (Exception ex) {
+            logger.error("Invalid JWT token: " + ex.getMessage(), ex);
             // Log error
-        } catch (ExpiredJwtException ex) {
-            // Log error
-        } catch (UnsupportedJwtException ex) {
-            // Log error
-        } catch (IllegalArgumentException ex) {
-            // Log error
-        }
+        } 
         return false;
     }
 
     public Authentication getAuthentication(String token) {
+        logger.info("token: " + token);
         UserDetails userDetails = userDetailsService.loadUserByUsername(getUsernameFromJWT(token));
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         List<String> roles = claims.get("roles", List.class);
@@ -114,6 +116,7 @@ public class JwtTokenProvider {
     }
 
     public String resolveToken(HttpServletRequest req) {
+        logger.info("resolveToken: " + req.getContextPath());
         String bearerToken = req.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);

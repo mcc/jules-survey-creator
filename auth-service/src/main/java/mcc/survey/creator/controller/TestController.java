@@ -1,11 +1,17 @@
 package mcc.survey.creator.controller;
 
+import java.util.Set;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.annotation.PostConstruct;
+import mcc.survey.creator.dto.CreateUserRequest;
+import mcc.survey.creator.model.User;
+import mcc.survey.creator.service.UserService;
 
 @RestController
 @RequestMapping("/api/test")
@@ -34,4 +40,11 @@ public class TestController {
         return "System Admin Board.";
     }
 
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/init-user")
+    public String initUser() {
+        return userService.createAdminUser();
+    }
 }

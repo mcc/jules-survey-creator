@@ -71,18 +71,18 @@ public class AuthController { // Renaming to UserController or creating a new on
         Set<Role> roles = new HashSet<>();
 
         if (strRoles == null || strRoles.isEmpty()) {
-            roles.add(Role.ROLE_USER); // Default role
+            roles.add(new Role("ROLE_USER")); // Default role
         } else {
             strRoles.forEach(role -> {
                 switch (role.toUpperCase()) {
                     case "ROLE_SYSTEM_ADMIN":
-                        roles.add(Role.ROLE_SYSTEM_ADMIN);
+                        roles.add(new Role("ROLE_SYSTEM_ADMIN"));
                         break;
                     case "ROLE_USER_ADMIN":
-                        roles.add(Role.ROLE_USER_ADMIN);
+                        roles.add(new Role("ROLE_USER_ADMIN"));
                         break;
                     default:
-                        roles.add(Role.ROLE_USER);
+                        roles.add(new Role("ROLE_USER"));
                 }
             });
         }

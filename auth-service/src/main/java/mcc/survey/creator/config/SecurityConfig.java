@@ -52,6 +52,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/api/test/**").anonymous() // Public test endpoints
                 .requestMatchers("/api/auth/login", "/api/auth/signup", "/api/auth/refresh").permitAll() // Specific public auth endpoints
                 .requestMatchers("/api/admin/**").authenticated() // Secure admin endpoints
                 .requestMatchers("/api/auth/users/**").authenticated() // Secure user-specific info under /api/auth/users

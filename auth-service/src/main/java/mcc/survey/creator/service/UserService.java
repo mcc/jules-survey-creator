@@ -4,6 +4,7 @@ import mcc.survey.creator.dto.CreateUserRequest;
 import mcc.survey.creator.dto.EditUserRequest;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.model.Role; // Assuming Role enum/class exists
+import mcc.survey.creator.repository.RoleRepository;
 import mcc.survey.creator.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -65,14 +69,18 @@ public class UserService {
         if (request.getRoles() != null) {
             request.getRoles().forEach(roleName -> {
                 try {
-                    roles.add(Role.valueOf(roleName.toUpperCase()));
+                    Role role = roleRepository.findByName(roleName.toUpperCase())
+                            .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
+                    roles.add(role);
                 } catch (IllegalArgumentException e) {
                     log.warn("Invalid role: {}", roleName);
                     // Or throw an exception if roles must be valid
                 }
             });
         } else {
-            roles.add(Role.ROLE_USER); // Make sure Role.ROLE_USER exists
+            Role role = roleRepository.findByName("ROLE_USER")
+                            .orElseThrow(() -> new IllegalArgumentException("Role not found: ROLUE_USER"));
+            roles.add(role); // Make sure Role.ROLE_USER exists
         }
         user.setRoles(roles);
 
@@ -106,7 +114,10 @@ public class UserService {
                 Set<Role> newRoles = new HashSet<>();
                  request.getRoles().forEach(roleName -> {
                     try {
-                        newRoles.add(Role.valueOf(roleName.toUpperCase()));
+                        Role role = roleRepository.findByName(roleName.toUpperCase())
+                            .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
+                    
+                        newRoles.add(role);
                     } catch (IllegalArgumentException e) {
                         log.warn("Invalid role: {}", roleName);
                     }
@@ -150,5 +161,24 @@ public class UserService {
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    public User findByName(String name) {
+        return userRepository.findByUsername(name).orElse(null);
+    }
+
+    public String createAdminUser() {
+        if (userRepository.count() > 0){
+            log.info("You cannot create admin account if the system already in user.");
+            return "You cannot create admin account if the system already in user";
+        } else {
+            CreateUserRequest createUserRequest = new CreateUserRequest();
+            createUserRequest.setUsername("admin");
+            createUserRequest.setEmail(null);
+            createUserRequest.setRoles(Set.of("ROLE_SYSTEM_ADMIN"));
+            User user = this.createUser(createUserRequest);
+            log.info("System Admin created");
+            return "System Admin created";
+        }
     }
 }

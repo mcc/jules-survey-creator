@@ -70,7 +70,7 @@ public class AuthControllerIntegrationTest {
         User existingUser = new User();
         existingUser.setUsername("existinguser");
         existingUser.setPassword(passwordEncoder.encode("password"));
-        existingUser.setRoles(Collections.singleton(Role.ROLE_USER));
+        existingUser.setRoles(Collections.singleton(new Role("ROLE_USER")));
         userRepository.save(existingUser);
 
         SignUpRequest signUpRequest = new SignUpRequest();
@@ -98,7 +98,7 @@ public class AuthControllerIntegrationTest {
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        user.setRoles(Collections.singleton(Role.ROLE_USER));
+        user.setRoles(Collections.singleton(new Role("ROLE_USER")));
         userRepository.save(user);
 
 

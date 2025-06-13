@@ -30,12 +30,13 @@ public class AdminController {
 
     @PostConstruct
     private void init() {
-        CreateUserRequest createUserRequest = new CreateUserRequest();
+        /*CreateUserRequest createUserRequest = new CreateUserRequest();
         createUserRequest.setUsername("admin");
         createUserRequest.setEmail("m@m.com");
-        createUserRequest.setRoles(Set.of(Role.ROLE_SYSTEM_ADMIN.toString()));
+        createUserRequest.setRoles(Set.of("ROLE_SYSTEM_ADMIN"));
         User user = userService.createUser(createUserRequest);
         System.out.println("AdminController initialized");
+        */
     }
 
 
