@@ -177,17 +177,24 @@ public class AuthController { // Renaming to UserController or creating a new on
             username = authentication.getPrincipal().toString();
         }
 
-        boolean passwordChanged = userService.changePassword(
-            username,
-            changePasswordRequest.getOldPassword(),
-            changePasswordRequest.getNewPassword()
-        );
-
-        if (passwordChanged) {
+        try {
+            userService.changePassword(
+                username,
+                changePasswordRequest.getOldPassword(),
+                changePasswordRequest.getNewPassword()
+            );
             return ResponseEntity.ok("Password changed successfully.");
-        } else {
-            // Consider more specific error messages based on UserService's return or exceptions
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: Could not change password. Check old password or user status.");
+        } catch (IllegalArgumentException e) {
+            // Handle validation errors, e.g., empty new password
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        } catch (RuntimeException e) {
+            // Handle user not found or invalid current password
+            if (e.getMessage().toLowerCase().contains("user not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
+            } else if (e.getMessage().toLowerCase().contains("invalid current password")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: An unexpected error occurred while changing password.");
         }
     }
   

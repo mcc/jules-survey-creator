@@ -141,28 +141,6 @@ public class UserService {
     }
 
     @Transactional
-    public boolean changePassword(String username, String oldPassword, String newPassword) {
-        Optional<User> userOptional = userRepository.findByUsername(username);
-        if (!userOptional.isPresent()) {
-            log.warn("User not found for password change: {}", username);
-            return false; // Or throw exception
-        }
-        User user = userOptional.get();
-
-        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            log.warn("Old password does not match for user: {}", username);
-            return false; // Or throw exception indicating incorrect old password
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        // IMPORTANT: Update the password expiration date upon successful password change
-        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
-        userRepository.save(user);
-        log.info("Password changed successfully for user: {}", username);
-        return true;
-    }
-
-    @Transactional
     public boolean resetPassword(String username) {
         return userRepository.findByUsername(username).map(user -> {
             String newPassword = generateRandomPassword();
@@ -174,6 +152,7 @@ public class UserService {
             return true;
         }).orElseGet(() -> {
             log.warn("User not found for password reset: {}", username);
+            return false;
         });
     }
                      
@@ -288,7 +267,8 @@ public class UserService {
 
         // Optional: Add password complexity rules here if needed
         // e.g., if (newPassword.length() < 8) throw new IllegalArgumentException("Password too short");
-
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
+        
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
