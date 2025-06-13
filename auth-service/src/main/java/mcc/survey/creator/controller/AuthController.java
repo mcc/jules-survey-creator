@@ -239,5 +239,7 @@ public class AuthController { // Renaming to UserController or creating a new on
             // log.error("Error changing password for user {}: {}", username, e.getMessage(), e); // Example logging
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponseDto("Error: An unexpected error occurred while changing password."));
         }
+      
+      
     }
 }
