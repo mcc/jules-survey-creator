@@ -7,7 +7,7 @@ import "survey-core/survey-core.css";
 import "survey-creator-core/survey-creator-core.css";
 
 const creatorOptions = {
-    autoSaveEnabled: true,
+    autoSaveEnabled: false,
     collapseOnDrag: true,
     showLogicTab: true,
     showTranslationTab: true
@@ -41,9 +41,25 @@ function SurveyJsCreatorComponent({ json, options }) {
   let [creator, setCreator] = useState();
 
   if (!creator) {
-    creator = new SurveyCreator(options || defaultCreatorOptions);
+    creator = new SurveyCreator(options || creatorOptions);
     setCreator(creator);
   }
+
+  const handleManualSave = () => {
+    console.log("Manual save triggered");
+    if (creator) {
+      creator.saveSurveyFunc(Date.now(), (saveNo, success) => {
+        if (success) {
+          alert("Survey saved successfully!");
+        } else {
+          alert("Failed to save survey.");
+        }
+      });
+    } else {
+      console.error("Creator instance not available for manual save.");
+      alert("Error: Creator not initialized. Cannot save survey.");
+    }
+  };
 
     useEffect(() => {
         creator.JSON = { // Set default JSON for a new survey
@@ -289,6 +305,12 @@ creator.saveSurveyFunc = (saveNo, callback) => {
                     <option value="published">Published</option>
                     <option value="expired">Expired</option>
                 </select>
+                <button
+                  onClick={handleManualSave}
+                  style={{ padding: '8px 16px', marginLeft: '20px', cursor: 'pointer' }}
+                >
+                  Save Survey
+                </button>
             </div>
             
       {/* Sharing Section */}
