@@ -171,7 +171,7 @@ public class UserService {
             log.warn("Admin password reset for user {} failed due to weak password: {}", username, e.getMessage());
             return false; // Password policy violated
         }
-    
+
         return userRepository.findByUsername(username).map(user -> {
             user.setPassword(passwordEncoder.encode(newPassword));
             user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Reset expiration date
@@ -298,10 +298,14 @@ public class UserService {
             throw new IllegalArgumentException("New password cannot be empty.");
         }
 
+        // Optional: Add password complexity rules here if needed
+        // e.g., if (newPassword.length() < 8) throw new IllegalArgumentException("Password too short");
+
         // Validate new password against policy
         PasswordPolicyValidator.validate(newPassword); // Throws IllegalArgumentException if policy violated
-        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
+
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Reset password expiration
         userRepository.save(user);
 
         log.info("Successfully changed password for user: {}", username);

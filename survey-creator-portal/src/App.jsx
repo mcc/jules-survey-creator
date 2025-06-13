@@ -100,7 +100,9 @@ function App() {
   // Wrapping with Router here if it's not already higher up in the component tree (e.g. in index.js)
   // Based on the prompt, it seems Router should be here.
   return (
+    <Router>
       <AppContent />
+    </Router>
   );
 }
 

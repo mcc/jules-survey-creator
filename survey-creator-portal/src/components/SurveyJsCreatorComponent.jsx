@@ -25,7 +25,7 @@ const defaultJson = {
 
 
 const defaultCreatorOptions = {
-  autoSaveEnabled: false,
+  autoSaveEnabled: true,
   collapseOnDrag: true
 };
 
