@@ -2,12 +2,13 @@ package mcc.survey.creator.controller;
 
 import mcc.survey.creator.dto.JwtResponse;
 import mcc.survey.creator.dto.LoginRequest;
-import mcc.survey.creator.dto.RefreshTokenRequest;
-import mcc.survey.creator.dto.SignUpRequest;
+import mcc.survey.creator.dto.*; // Import all DTOs
 import mcc.survey.creator.model.Role;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
+import mcc.survey.creator.service.UserService; // Import UserService
+import mcc.survey.creator.util.ResourceNotFoundException; // Import ResourceNotFoundException
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,9 @@ public class AuthController { // Renaming to UserController or creating a new on
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private UserService userService; // Inject UserService
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -141,6 +145,41 @@ public class AuthController { // Renaming to UserController or creating a new on
             return ResponseEntity.ok(new UserSummaryDTO(user.getId(), user.getUsername()));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
+        try {
+            userService.initiatePasswordReset(request.getEmail());
+            return ResponseEntity.ok("Password reset email sent. Please check your inbox.");
+        } catch (ResourceNotFoundException e) {
+            // Even if user is not found, we might want to return a generic success message
+            // to prevent email enumeration attacks.
+            // However, the current userService.initiatePasswordReset logs and returns void if not found.
+            // For more explicit client feedback (and if not concerned about enumeration):
+            // return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.ok("If your email is registered, you will receive a password reset link.");
+        } catch (Exception e) {
+            // Log the exception e
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error initiating password reset.");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto request) {
+        if (request.getToken() == null || request.getToken().isEmpty() ||
+            request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
+            return ResponseEntity.badRequest().body("Token and new password must be provided.");
+        }
+
+        boolean result = userService.completePasswordReset(request.getToken(), request.getNewPassword());
+
+        if (result) {
+            return ResponseEntity.ok("Password has been reset successfully.");
+        } else {
+            // More specific errors could be returned from the service layer if needed
+            return ResponseEntity.badRequest().body("Invalid or expired token, or password could not be reset.");
         }
     }
 }
