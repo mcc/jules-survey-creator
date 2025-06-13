@@ -1,5 +1,6 @@
 package mcc.survey.creator.controller;
 
+import mcc.survey.creator.dto.AdminResetPasswordRequest; // Import new DTO
 import mcc.survey.creator.dto.CreateUserRequest;
 import mcc.survey.creator.dto.EditUserRequest;
 import mcc.survey.creator.dto.UpdateUserStatusRequest;
@@ -80,14 +81,28 @@ public class AdminController {
         }
     }
 
-    @PostMapping("/users/{username}/reset-password")
+    // Changed endpoint from /users/{username}/reset-password to /users/reset-password
+    // Username is now part of the request body
+    @PostMapping("/users/reset-password")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
-    public ResponseEntity<?> resetPassword(@PathVariable String username) {
-        boolean result = userService.resetPassword(username);
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody AdminResetPasswordRequest request) {
+        // The userService.resetPassword now takes username and newPassword,
+        // and returns false if user not found OR if password policy is violated.
+        boolean result = userService.resetPassword(request.getUsername(), request.getNewPassword());
         if (result) {
-            return ResponseEntity.ok("Password reset successfully for user: " + username);
+            return ResponseEntity.ok("Password reset successfully for user: " + request.getUsername());
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found: " + username);
+            // Determine if failure was due to user not found or password policy.
+            // For simplicity, returning a generic bad request or more specific error if userService could provide it.
+            // Assuming userService logs the specific reason (user not found vs policy violation).
+            // A more advanced implementation might involve custom exceptions or response objects from the service.
+            // For now, a generic failure message for this controller endpoint.
+            // Check if user exists first to give a more specific error for "user not found"
+            if (userService.findByName(request.getUsername()) == null) {
+                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found: " + request.getUsername());
+            }
+            // If user exists, failure is likely due to password policy (logged by service)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password reset failed for user: " + request.getUsername() + ". This could be due to a password policy violation or other server-side issue.");
         }
     }
 

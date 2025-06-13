@@ -46,3 +46,21 @@ export const changeCurrentUserPassword = (passwordData) => {
       throw error.response?.data || error; // Re-throw for the component to catch
     });
 };
+
+export const requestPasswordReset = (email) => {
+  return apiClient.post('/auth/forgot-password', { email })
+    .then(response => response.data)
+    .catch(error => {
+      console.error('Error requesting password reset:', error.response?.data || error.message);
+      throw error.response?.data || error;
+    });
+};
+
+export const confirmPasswordReset = (token, newPassword) => {
+  return apiClient.post('/auth/reset-password', { token, newPassword })
+    .then(response => response.data)
+    .catch(error => {
+      console.error('Error confirming password reset:', error.response?.data || error.message);
+      throw error.response?.data || error;
+    });
+};
