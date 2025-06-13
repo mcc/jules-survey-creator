@@ -5,9 +5,11 @@ import mcc.survey.creator.dto.LoginRequest;
 import mcc.survey.creator.dto.RefreshTokenRequest;
 import mcc.survey.creator.dto.SignUpRequest;
 import mcc.survey.creator.model.Role;
+import mcc.survey.creator.dto.ChangePasswordRequest; // New DTO
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
+import mcc.survey.creator.service.UserService; // Autowire this
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +20,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -41,11 +46,29 @@ public class AuthController { // Renaming to UserController or creating a new on
     @Autowired
     JwtTokenProvider jwtTokenProvider;
 
+    @Autowired
+    private UserService userService;
+
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+
+            org.springframework.security.core.userdetails.User principal = (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
+            Optional<User> userOptional = userRepository.findByUsername(principal.getUsername());
+
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if (user.getPasswordExpirationDate() != null &&
+                    (user.getPasswordExpirationDate().isBefore(LocalDate.now()) || user.getPasswordExpirationDate().isEqual(LocalDate.now()))) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: Your password has expired. Please change your password.");
+                }
+            } else {
+                // This case should ideally not happen if authentication was successful
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: User details not found after authentication.");
+            }
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtTokenProvider.generateToken(authentication);
@@ -141,6 +164,31 @@ public class AuthController { // Renaming to UserController or creating a new on
             return ResponseEntity.ok(new UserSummaryDTO(user.getId(), user.getUsername()));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+    }
+
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()") // Ensure user is authenticated
+    public ResponseEntity<?> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else {
+            username = authentication.getPrincipal().toString();
+        }
+
+        boolean passwordChanged = userService.changePassword(
+            username,
+            changePasswordRequest.getOldPassword(),
+            changePasswordRequest.getNewPassword()
+        );
+
+        if (passwordChanged) {
+            return ResponseEntity.ok("Password changed successfully.");
+        } else {
+            // Consider more specific error messages based on UserService's return or exceptions
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: Could not change password. Check old password or user status.");
         }
     }
 }

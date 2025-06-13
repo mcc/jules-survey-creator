@@ -17,6 +17,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
 // import java.util.stream.Collectors; // Not used in the provided code
@@ -83,6 +84,7 @@ public class UserService {
             roles.add(role); // Make sure Role.ROLE_USER exists
         }
         user.setRoles(roles);
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
 
         User savedUser = userRepository.save(user);
         log.info("Created new user: {}. Generated password: {}", savedUser.getUsername(), randomPassword);
@@ -131,10 +133,33 @@ public class UserService {
     }
 
     @Transactional
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (!userOptional.isPresent()) {
+            log.warn("User not found for password change: {}", username);
+            return false; // Or throw exception
+        }
+        User user = userOptional.get();
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            log.warn("Old password does not match for user: {}", username);
+            return false; // Or throw exception indicating incorrect old password
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        // IMPORTANT: Update the password expiration date upon successful password change
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
+        userRepository.save(user);
+        log.info("Password changed successfully for user: {}", username);
+        return true;
+    }
+
+    @Transactional
     public boolean resetPassword(String username) {
         return userRepository.findByUsername(username).map(user -> {
             String newPassword = generateRandomPassword();
             user.setPassword(passwordEncoder.encode(newPassword));
+            user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
             userRepository.save(user);
             log.info("Reset password for user: {}. New password: {}", username, newPassword);
             // Again, logging passwords is risky.
