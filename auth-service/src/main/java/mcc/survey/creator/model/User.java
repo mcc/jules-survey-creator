@@ -54,6 +54,10 @@ public class User {
     private String resetPasswordToken;
     private LocalDateTime resetPasswordTokenExpiry;
 
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(name = "user_teams", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "team_id"))
+    private Set<Team> teams = new HashSet<>();
+
     // Getters and setters
     public Long getId() {
         return id;
@@ -133,5 +137,13 @@ public class User {
 
     public void setResetPasswordTokenExpiry(LocalDateTime resetPasswordTokenExpiry) {
         this.resetPasswordTokenExpiry = resetPasswordTokenExpiry;
+    }
+
+    public Set<Team> getTeams() {
+        return teams;
+    }
+
+    public void setTeams(Set<Team> teams) {
+        this.teams = teams;
     }
 }

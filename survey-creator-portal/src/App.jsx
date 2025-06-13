@@ -8,11 +8,15 @@ import ResetPasswordConfirmForm from './components/ResetPasswordConfirmForm'; //
 import SideMenu from './components/SideMenu';
 import MainPanel from './components/MainPanel';
 import UserList from './components/UserList';
-import UserForm from './components/UserForm'; // Added UserForm import
+import UserForm from './components/UserForm';
 import Dashboard from './components/Dashboard';
-import UserProfilePage from './components/UserProfilePage'; // Added UserProfilePage import
+import UserProfilePage from './components/UserProfilePage';
 // import SurveyCreator from './components/SurveyCreator';
 import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
+import ServiceList from './components/admin/ServiceList';
+import TeamList from './components/admin/TeamList'; // Import TeamList
+// import ServiceForm from './components/admin/ServiceForm';
+// import TeamForm from './components/admin/TeamForm';
 import { Box, CssBaseline } from '@mui/material';
 import './App.css';
 import SurveyList from './components/SurveyList';
@@ -71,6 +75,18 @@ function AppContent() {
           <Route path="/admin/users" element={<UserList />} />
           <Route path="/admin/users/new" element={<UserForm />} />
           <Route path="/admin/users/:userId/edit" element={<UserForm />} />
+
+          {/* Service Management Routes */}
+          <Route path="/admin/services" element={<ServiceList />} />
+          {/* Placeholder routes for new/edit service - can be refined later to show ServiceForm */}
+          {/* <Route path="/admin/services/new" element={<ServiceForm />} /> */}
+          {/* <Route path="/admin/services/:serviceId/edit" element={<ServiceForm />} /> */}
+
+          {/* Team Management Routes */}
+          <Route path="/admin/teams" element={<TeamList />} />
+          {/* Placeholder routes for new/edit team - can be refined later to show TeamForm */}
+          {/* <Route path="/admin/teams/new" element={<TeamForm />} /> */}
+          {/* <Route path="/admin/teams/:teamId/edit" element={<TeamForm />} /> */}
 
           {/* Survey Creator Route */}
           <Route path="/survey-creator" element={<SurveyJsCreatorComponent />} />

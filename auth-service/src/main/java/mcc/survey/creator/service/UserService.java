@@ -1,13 +1,14 @@
 package mcc.survey.creator.service;
 
-import mcc.survey.creator.util.PasswordPolicyValidator; // Added import
-import mcc.survey.creator.dto.CreateUserRequest;
-import mcc.survey.creator.dto.EditUserRequest;
+import mcc.survey.creator.util.PasswordPolicyValidator;
+import mcc.survey.creator.dto.*; // Import all DTOs
 import mcc.survey.creator.model.User;
-import mcc.survey.creator.model.Role; // Assuming Role enum/class exists
+import mcc.survey.creator.model.Role;
+import mcc.survey.creator.model.Team; // Import Team model
 import mcc.survey.creator.repository.RoleRepository;
+import mcc.survey.creator.repository.TeamRepository; // Import TeamRepository
 import mcc.survey.creator.repository.UserRepository;
-import mcc.survey.creator.util.ResourceNotFoundException; // Assuming this exception class exists or will be created
+import mcc.survey.creator.exception.ResourceNotFoundException; // Corrected import for custom exception
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,7 @@ import java.util.List;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
-// import java.util.stream.Collectors; // Not used in the provided code
+import java.util.stream.Collectors; // Will be used for mapping
 
 @Service
 public class UserService {
@@ -47,6 +48,12 @@ public class UserService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private TeamRepository teamRepository; // Inject TeamRepository
+
+    @Autowired
+    private TeamService teamService; // Inject TeamService for mapToTeamDto
+
     // Helper method to generate random password
     private String generateRandomPassword() {
         byte[] bytes = new byte[PASSWORD_LENGTH];
@@ -54,17 +61,51 @@ public class UserService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
+    // --- Helper DTO Mapping Methods ---
+    public UserDto mapToUserDto(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserDto userDto = new UserDto();
+        userDto.setId(user.getId());
+        userDto.setUsername(user.getUsername());
+        userDto.setEmail(user.getEmail());
+        userDto.setActive(user.isActive());
+
+        if (user.getRoles() != null) {
+            userDto.setRoles(user.getRoles().stream().map(role -> {
+                RoleDto roleDto = new RoleDto();
+                roleDto.setId(role.getId());
+                roleDto.setName(role.getName());
+                return roleDto;
+            }).collect(Collectors.toSet()));
+        }
+
+        if (user.getTeams() != null) {
+            userDto.setTeams(user.getTeams().stream()
+                    .map(teamService::mapToTeamDto) // Use TeamService for mapping
+                    .collect(Collectors.toSet()));
+        }
+        return userDto;
+    }
+
+    public List<UserDto> mapToUserDtoList(List<User> users) {
+        return users.stream().map(this::mapToUserDto).collect(Collectors.toList());
+    }
+    // --- End Helper DTO Mapping Methods ---
+
+
     @Transactional
-    public User createUser(CreateUserRequest request) {
+    public UserDto createUser(CreateUserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Error: Username is already taken!");
+            throw new mcc.survey.creator.exception.DuplicateResourceException("Error: Username is already taken!");
         }
 
         // Assuming email is a new field in User model and CreateUserRequest
         // If User model doesn't have email, this check and set operation should be removed or adapted
         // For now, I'll assume User model will be updated to include an email field.
         if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Error: Email is already in use!");
+            throw new mcc.survey.creator.exception.DuplicateResourceException("Error: Email is already in use!");
         }
 
         User user = new User();
@@ -95,50 +136,72 @@ public class UserService {
         user.setRoles(roles);
         user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
 
+        // Handle Team assignments
+        if (request.getTeamIds() != null && !request.getTeamIds().isEmpty()) {
+            Set<Team> teams = new HashSet<>();
+            for (Long teamId : request.getTeamIds()) {
+                Team team = teamRepository.findById(teamId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Team not found with id: " + teamId));
+                teams.add(team);
+            }
+            user.setTeams(teams);
+        }
+
         User savedUser = userRepository.save(user);
         log.info("Created new user: {}. Generated password: {}", savedUser.getUsername(), randomPassword);
         // It's generally not a good practice to return the generated password, even in logs for long term.
         // Consider sending it via a secure channel or having user set it on first login.
-        return savedUser;
+        return mapToUserDto(savedUser);
     }
 
     @Transactional
-    public Optional<User> editUser(Long userId, EditUserRequest request) {
-        return userRepository.findById(userId).map(user -> {
-            if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
-                if (userRepository.existsByUsername(request.getUsername())) {
-                    throw new RuntimeException("Error: Username is already taken!");
+    public UserDto editUser(Long userId, EditUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new mcc.survey.creator.exception.DuplicateResourceException("Error: Username is already taken!");
+            }
+            user.setUsername(request.getUsername());
+        }
+        // Assuming email is a new field in User model and EditUserRequest
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new mcc.survey.creator.exception.DuplicateResourceException("Error: Email is already in use!");
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getIsActive() != null) {
+            user.setActive(request.getIsActive());
+        }
+        if (request.getRoles() != null && !request.getRoles().isEmpty()) {
+            Set<Role> newRoles = new HashSet<>();
+            request.getRoles().forEach(roleName -> {
+                Role role = roleRepository.findByName(roleName.toUpperCase())
+                        .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleName));
+                newRoles.add(role);
+            });
+            user.setRoles(newRoles);
+        }
+
+        // Handle Team assignments
+        if (request.getTeamIds() != null) {
+            user.getTeams().clear(); // Clear existing teams first
+            if (!request.getTeamIds().isEmpty()) {
+                Set<Team> newTeams = new HashSet<>();
+                for (Long teamId : request.getTeamIds()) {
+                    Team team = teamRepository.findById(teamId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Team not found with id: " + teamId));
+                    newTeams.add(team);
                 }
-                user.setUsername(request.getUsername());
+                user.setTeams(newTeams);
             }
-            // Assuming email is a new field in User model and EditUserRequest
-            if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-                 if (userRepository.existsByEmail(request.getEmail())) {
-                    throw new RuntimeException("Error: Email is already in use!");
-                }
-                user.setEmail(request.getEmail());
-            }
-            if (request.getIsActive() != null) {
-                user.setActive(request.getIsActive());
-            }
-            if (request.getRoles() != null && !request.getRoles().isEmpty()) {
-                Set<Role> newRoles = new HashSet<>();
-                 request.getRoles().forEach(roleName -> {
-                    try {
-                        Role role = roleRepository.findByName(roleName.toUpperCase())
-                            .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleName));
-                    
-                        newRoles.add(role);
-                    } catch (IllegalArgumentException e) {
-                        log.warn("Invalid role: {}", roleName);
-                    }
-                });
-                user.setRoles(newRoles);
-            }
-            User updatedUser = userRepository.save(user);
-            log.info("Updated user: {}", updatedUser.getUsername());
-            return updatedUser;
-        });
+        }
+
+        User updatedUser = userRepository.save(user);
+        log.info("Updated user: {}", updatedUser.getUsername());
+        return mapToUserDto(updatedUser);
     }
 
     @Transactional
@@ -218,39 +281,49 @@ public class UserService {
     }
 
     @Transactional
-    public Optional<User> setUserStatus(Long userId, boolean isActive) {
-        return userRepository.findById(userId).map(user -> {
-            user.setActive(isActive);
-            User updatedUser = userRepository.save(user);
-            log.info("Set user {} active status to: {}", user.getUsername(), isActive);
-            return updatedUser;
-        });
+    public UserDto setUserStatus(Long userId, boolean isActive) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        user.setActive(isActive);
+        User updatedUser = userRepository.save(user);
+        log.info("Set user {} active status to: {}", user.getUsername(), isActive);
+        return mapToUserDto(updatedUser);
     }
 
-    public Optional<User> getUserById(Long userId) {
-        return userRepository.findById(userId);
+    public UserDto getUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        return mapToUserDto(user);
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public User getUserEntityById(Long userId) { // Keep a method to get Entity if needed internally
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
     }
 
-    public User findByName(String name) {
-        return userRepository.findByUsername(name).orElse(null);
+    public List<UserDto> getAllUsers() {
+        return mapToUserDtoList(userRepository.findAll());
+    }
+
+    public UserDto findByName(String name) { // Changed to return UserDto
+        User user = userRepository.findByUsername(name)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with name: " + name));
+        return mapToUserDto(user);
     }
 
     public String createAdminUser() {
-        if (userRepository.count() > 0){
-            log.info("You cannot create admin account if the system already in user.");
-            return "You cannot create admin account if the system already in user";
+        if (userRepository.count() > 0) {
+            log.info("Admin account cannot be created if users already exist in the system.");
+            return "Admin account cannot be created if users already exist in the system.";
         } else {
             CreateUserRequest createUserRequest = new CreateUserRequest();
             createUserRequest.setUsername("admin");
-            createUserRequest.setEmail("admin@admin.com");
+            createUserRequest.setEmail("admin@example.com"); // Changed to example.com
             createUserRequest.setRoles(Set.of("ROLE_SYSTEM_ADMIN"));
-            User user = this.createUser(createUserRequest);
-            log.info("System Admin created");
-            return "System Admin created";
+            // No teams for initial admin
+            UserDto userDto = this.createUser(createUserRequest); // createUser now returns UserDto
+            log.info("System Admin created: {}", userDto.getUsername());
+            return "System Admin created: " + userDto.getUsername();
         }
     }
 
