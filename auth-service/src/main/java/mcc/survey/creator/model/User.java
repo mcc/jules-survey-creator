@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -49,6 +50,7 @@ public class User {
     @Column(nullable = false)
     private boolean isActive = true;
 
+    private LocalDate passwordExpirationDate;
     private String resetPasswordToken;
     private LocalDateTime resetPasswordTokenExpiry;
 

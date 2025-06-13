@@ -2,35 +2,29 @@ package mcc.survey.creator.controller;
 
 import mcc.survey.creator.dto.JwtResponse;
 import mcc.survey.creator.dto.LoginRequest;
-<<<<<<< feat/forgot-password
 import mcc.survey.creator.dto.*; // Import all DTOs
-=======
-import mcc.survey.creator.dto.RefreshTokenRequest;
-import mcc.survey.creator.dto.SignUpRequest;
-import mcc.survey.creator.dto.ChangePasswordRequest; // Added import
->>>>>>> main
 import mcc.survey.creator.model.Role;
+import mcc.survey.creator.dto.ChangePasswordRequest; // New DTO
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
-<<<<<<< feat/forgot-password
-import mcc.survey.creator.service.UserService; // Import UserService
+import mcc.survey.creator.service.UserService; // Autowire this
 import mcc.survey.creator.util.ResourceNotFoundException; // Import ResourceNotFoundException
-=======
-import mcc.survey.creator.service.UserService; // Added import
->>>>>>> main
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-        import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -53,17 +47,27 @@ public class AuthController { // Renaming to UserController or creating a new on
     JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-<<<<<<< feat/forgot-password
-    private UserService userService; // Inject UserService
-=======
-    private UserService userService; // Added UserService injection
->>>>>>> main
+    private UserService userService;
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+
+            org.springframework.security.core.userdetails.User principal = (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
+            Optional<User> userOptional = userRepository.findByUsername(principal.getUsername());
+
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if (user.getPasswordExpirationDate() != null &&
+                    (user.getPasswordExpirationDate().isBefore(LocalDate.now()) || user.getPasswordExpirationDate().isEqual(LocalDate.now()))) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: Your password has expired. Please change your password.");
+                }
+            } else {
+                // This case should ideally not happen if authentication was successful
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: User details not found after authentication.");
+            }
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtTokenProvider.generateToken(authentication);
@@ -162,7 +166,31 @@ public class AuthController { // Renaming to UserController or creating a new on
         }
     }
 
-<<<<<<< feat/forgot-password
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()") // Ensure user is authenticated
+    public ResponseEntity<?> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username;
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        } else {
+            username = authentication.getPrincipal().toString();
+        }
+
+        boolean passwordChanged = userService.changePassword(
+            username,
+            changePasswordRequest.getOldPassword(),
+            changePasswordRequest.getNewPassword()
+        );
+
+        if (passwordChanged) {
+            return ResponseEntity.ok("Password changed successfully.");
+        } else {
+            // Consider more specific error messages based on UserService's return or exceptions
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: Could not change password. Check old password or user status.");
+        }
+    }
+  
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
         try {
@@ -195,8 +223,9 @@ public class AuthController { // Renaming to UserController or creating a new on
         } else {
             // More specific errors could be returned from the service layer if needed
             return ResponseEntity.badRequest().body("Invalid or expired token, or password could not be reset.");
-=======
-    // Add this method to AuthController.java
+        }
+    }
+  
     @PostMapping("/users/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest, Authentication authentication) {
@@ -228,7 +257,6 @@ public class AuthController { // Renaming to UserController or creating a new on
             }
             // Generic error for other runtime exceptions
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: An unexpected error occurred while changing password.");
->>>>>>> main
         }
     }
 }
