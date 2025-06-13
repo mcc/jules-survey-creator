@@ -3,6 +3,7 @@ package mcc.survey.creator.service;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.util.ResourceNotFoundException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -146,5 +148,61 @@ class UserServiceTest {
         assertFalse(result);
         assertEquals("encodedPassword", testUser.getPassword()); // Password should not change
         verify(userRepository, never()).save(any(User.class)); // No save operation
+    }
+
+    @Test
+    void changePassword_Success() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
+        when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
+
+        userService.changePassword("testuser", "oldPassword", "newPassword");
+
+        verify(passwordEncoder).encode("newPassword");
+        assertEquals("encodedNewPassword", testUser.getPassword());
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void changePassword_UserNotFound() {
+        when(userRepository.findByUsername("unknownuser")).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            userService.changePassword("unknownuser", "oldPassword", "newPassword");
+        });
+        assertEquals("User not found: unknownuser", exception.getMessage());
+    }
+
+    @Test
+    void changePassword_IncorrectOldPassword() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("wrongOldPassword", "encodedOldPassword")).thenReturn(false);
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            userService.changePassword("testuser", "wrongOldPassword", "newPassword");
+        });
+        assertEquals("Invalid current password.", exception.getMessage());
+    }
+
+    @Test
+    void changePassword_NewPasswordIsEmpty() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.changePassword("testuser", "oldPassword", "");
+        });
+        assertEquals("New password cannot be empty.", exception.getMessage());
+    }
+
+    @Test
+    void changePassword_NewPasswordIsNull() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.changePassword("testuser", "oldPassword", null);
+        });
+        assertEquals("New password cannot be empty.", exception.getMessage());
     }
 }

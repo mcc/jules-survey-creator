@@ -225,4 +225,35 @@ public class UserService {
             return "System Admin created";
         }
     }
+
+    @Transactional
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        log.debug("Attempting to change password for user: {}", username);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.warn("User not found: {}", username);
+                    // Consider creating a more specific exception, e.g., UserNotFoundException
+                    return new RuntimeException("User not found: " + username);
+                });
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            log.warn("Attempt to change password with incorrect current password for user: {}", username);
+            // Consider creating a more specific exception, e.g., InvalidCredentialsException
+            throw new RuntimeException("Invalid current password.");
+        }
+
+        if (newPassword == null || newPassword.isEmpty()) {
+            log.warn("New password cannot be empty for user: {}", username);
+            throw new IllegalArgumentException("New password cannot be empty.");
+        }
+
+        // Optional: Add password complexity rules here if needed
+        // e.g., if (newPassword.length() < 8) throw new IllegalArgumentException("Password too short");
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("Successfully changed password for user: {}", username);
+    }
 }
