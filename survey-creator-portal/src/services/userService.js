@@ -32,6 +32,9 @@ export const inactivateUser = (userId) => {
   return setUserStatus(userId, false);
 };
 
+export const getRoles = () => {
+  return apiClient.get('/admin/roles').then(response => response.data);
+}
 // Add this function to userService.js
 
 export const changeCurrentUserPassword = (passwordData) => {
