@@ -6,6 +6,7 @@ import mcc.survey.creator.model.User;
 import mcc.survey.creator.model.Role; // Assuming Role enum/class exists
 import mcc.survey.creator.repository.RoleRepository;
 import mcc.survey.creator.repository.UserRepository;
+import mcc.survey.creator.util.ResourceNotFoundException; // Assuming this exception class exists or will be created
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime; // Added for resetPasswordTokenExpiry
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
 // import java.util.stream.Collectors; // Not used in the provided code
@@ -36,6 +39,12 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private PasswordResetTokenService passwordResetTokenService;
+
+    @Autowired
+    private EmailService emailService;
 
     // Helper method to generate random password
     private String generateRandomPassword() {
@@ -83,6 +92,7 @@ public class UserService {
             roles.add(role); // Make sure Role.ROLE_USER exists
         }
         user.setRoles(roles);
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
 
         User savedUser = userRepository.save(user);
         log.info("Created new user: {}. Generated password: {}", savedUser.getUsername(), randomPassword);
@@ -131,18 +141,90 @@ public class UserService {
     }
 
     @Transactional
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (!userOptional.isPresent()) {
+            log.warn("User not found for password change: {}", username);
+            return false; // Or throw exception
+        }
+        User user = userOptional.get();
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            log.warn("Old password does not match for user: {}", username);
+            return false; // Or throw exception indicating incorrect old password
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        // IMPORTANT: Update the password expiration date upon successful password change
+        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
+        userRepository.save(user);
+        log.info("Password changed successfully for user: {}", username);
+        return true;
+    }
+
+    @Transactional
     public boolean resetPassword(String username) {
         return userRepository.findByUsername(username).map(user -> {
             String newPassword = generateRandomPassword();
             user.setPassword(passwordEncoder.encode(newPassword));
+            user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
             userRepository.save(user);
             log.info("Reset password for user: {}. New password: {}", username, newPassword);
             // Again, logging passwords is risky.
             return true;
         }).orElseGet(() -> {
             log.warn("User not found for password reset: {}", username);
-            return false;
         });
+    }
+                     
+    public void initiatePasswordReset(String email) {
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isEmpty()) {
+            log.warn("Password reset requested for non-existent email: {}", email);
+            // Consider throwing ResourceNotFoundException or returning a specific response
+            // For now, just logging and returning to avoid leaking information about existing emails.
+            return;
+            // throw new ResourceNotFoundException("User not found with email: " + email);
+        }
+
+        User user = userOptional.get();
+        String token = passwordResetTokenService.generateToken();
+        LocalDateTime expiryDate = passwordResetTokenService.getExpiryDate();
+
+        user.setResetPasswordToken(token);
+        user.setResetPasswordTokenExpiry(expiryDate);
+        userRepository.save(user);
+
+        emailService.sendPasswordResetEmail(user.getEmail(), token);
+        log.info("Password reset initiated for user: {}", user.getUsername());
+    }
+
+    @Transactional
+    public boolean completePasswordReset(String token, String newPassword) {
+        Optional<User> userOptional = userRepository.findByResetPasswordToken(token);
+        if (userOptional.isEmpty()) {
+            log.warn("Invalid or non-existent password reset token used: {}", token);
+            return false;
+        }
+
+        User user = userOptional.get();
+
+        if (passwordResetTokenService.isTokenExpired(user.getResetPasswordTokenExpiry())) {
+            log.warn("Expired password reset token used for user: {}", user.getUsername());
+            // Optionally, clear the token anyway
+            // user.setResetPasswordToken(null);
+            // user.setResetPasswordTokenExpiry(null);
+            // userRepository.save(user);
+            return false;
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiry(null);
+        userRepository.save(user);
+
+        log.info("Password successfully reset for user: {}", user.getUsername());
+        return true;
     }
 
     @Transactional
@@ -180,5 +262,36 @@ public class UserService {
             log.info("System Admin created");
             return "System Admin created";
         }
+    }
+
+    @Transactional
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        log.debug("Attempting to change password for user: {}", username);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.warn("User not found: {}", username);
+                    // Consider creating a more specific exception, e.g., UserNotFoundException
+                    return new RuntimeException("User not found: " + username);
+                });
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            log.warn("Attempt to change password with incorrect current password for user: {}", username);
+            // Consider creating a more specific exception, e.g., InvalidCredentialsException
+            throw new RuntimeException("Invalid current password.");
+        }
+
+        if (newPassword == null || newPassword.isEmpty()) {
+            log.warn("New password cannot be empty for user: {}", username);
+            throw new IllegalArgumentException("New password cannot be empty.");
+        }
+
+        // Optional: Add password complexity rules here if needed
+        // e.g., if (newPassword.length() < 8) throw new IllegalArgumentException("Password too short");
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("Successfully changed password for user: {}", username);
     }
 }

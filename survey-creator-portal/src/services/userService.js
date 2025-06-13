@@ -34,4 +34,18 @@ export const inactivateUser = (userId) => {
 
 export const getRoles = () => {
   return apiClient.get('/admin/roles').then(response => response.data);
+}
+// Add this function to userService.js
+
+export const changeCurrentUserPassword = (passwordData) => {
+  // passwordData is expected to be an object like:
+  // { oldPassword: "currentPassword", newPassword: "newPasswordGoesHere" }
+  return apiClient.post('/auth/users/change-password', passwordData)
+    .then(response => response.data) // Or handle the full response if needed
+    .catch(error => {
+      // It's often better to let the calling component handle UI errors,
+      // but re-throwing or transforming the error can be useful.
+      console.error('Error changing password:', error.response?.data || error.message);
+      throw error.response?.data || error; // Re-throw for the component to catch
+    });
 };
