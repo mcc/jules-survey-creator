@@ -1,6 +1,5 @@
 package mcc.survey.creator.config;
 
-import mcc.survey.creator.model.Role;
 import mcc.survey.creator.security.JwtTokenFilter;
 import mcc.survey.creator.security.JwtTokenProvider;
 

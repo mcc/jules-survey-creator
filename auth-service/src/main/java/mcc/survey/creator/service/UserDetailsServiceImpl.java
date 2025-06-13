@@ -25,9 +25,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
         Set<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.name()))
+                .flatMap(role -> role.getAuthorities().stream()) // Stream all authorities from all roles
+                .map(authority -> new SimpleGrantedAuthority(authority.getName())) // Map Authority.name to GrantedAuthority
                 .collect(Collectors.toSet());
 
-        return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(), authorities);
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                user.isActive(), // Assuming User entity has an isActive field
+                true, // accountNonExpired
+                true, // credentialsNonExpired
+                true, // accountNonLocked
+                authorities);
     }
 }
