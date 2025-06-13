@@ -2,21 +2,21 @@ package mcc.survey.creator.controller;
 
 import mcc.survey.creator.dto.JwtResponse;
 import mcc.survey.creator.dto.LoginRequest;
-import mcc.survey.creator.dto.RefreshTokenRequest;
-import mcc.survey.creator.dto.SignUpRequest;
+import mcc.survey.creator.dto.*; // Import all DTOs
 import mcc.survey.creator.model.Role;
 import mcc.survey.creator.dto.ChangePasswordRequest; // New DTO
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
 import mcc.survey.creator.service.UserService; // Autowire this
+import mcc.survey.creator.util.ResourceNotFoundException; // Import ResourceNotFoundException
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-        import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,7 +48,6 @@ public class AuthController { // Renaming to UserController or creating a new on
 
     @Autowired
     private UserService userService;
-
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -189,6 +188,75 @@ public class AuthController { // Renaming to UserController or creating a new on
         } else {
             // Consider more specific error messages based on UserService's return or exceptions
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: Could not change password. Check old password or user status.");
+        }
+    }
+  
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
+        try {
+            userService.initiatePasswordReset(request.getEmail());
+            return ResponseEntity.ok("Password reset email sent. Please check your inbox.");
+        } catch (ResourceNotFoundException e) {
+            // Even if user is not found, we might want to return a generic success message
+            // to prevent email enumeration attacks.
+            // However, the current userService.initiatePasswordReset logs and returns void if not found.
+            // For more explicit client feedback (and if not concerned about enumeration):
+            // return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.ok("If your email is registered, you will receive a password reset link.");
+        } catch (Exception e) {
+            // Log the exception e
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error initiating password reset.");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto request) {
+        if (request.getToken() == null || request.getToken().isEmpty() ||
+            request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
+            return ResponseEntity.badRequest().body("Token and new password must be provided.");
+        }
+
+        boolean result = userService.completePasswordReset(request.getToken(), request.getNewPassword());
+
+        if (result) {
+            return ResponseEntity.ok("Password has been reset successfully.");
+        } else {
+            // More specific errors could be returned from the service layer if needed
+            return ResponseEntity.badRequest().body("Invalid or expired token, or password could not be reset.");
+        }
+    }
+  
+    @PostMapping("/users/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: User is not authenticated.");
+        }
+        String username = authentication.getName();
+
+        try {
+            if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isEmpty()) {
+                return ResponseEntity.badRequest().body("Error: New password cannot be empty.");
+            }
+            // Consider adding more validation for newPassword if needed (e.g. length, complexity)
+            // though some of this might be better handled in the service layer or via validation annotations on the DTO.
+
+            userService.changePassword(username, changePasswordRequest.getOldPassword(), changePasswordRequest.getNewPassword());
+            return ResponseEntity.ok("Password changed successfully.");
+        } catch (IllegalArgumentException e) {
+            // This catches specific validation errors like empty new password from service
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        } catch (RuntimeException e) {
+            // This catches user not found or invalid current password from service
+            // Log the exception server-side for more details
+            // log.error("Error changing password for user {}: {}", username, e.getMessage()); // Make sure to have a logger if you use this
+            if (e.getMessage().toLowerCase().contains("user not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error: " + e.getMessage());
+            } else if (e.getMessage().toLowerCase().contains("invalid current password")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+            }
+            // Generic error for other runtime exceptions
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: An unexpected error occurred while changing password.");
         }
     }
 }

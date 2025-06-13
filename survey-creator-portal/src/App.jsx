@@ -8,6 +8,7 @@ import MainPanel from './components/MainPanel';
 import UserList from './components/UserList';
 import UserForm from './components/UserForm'; // Added UserForm import
 import Dashboard from './components/Dashboard';
+import UserProfilePage from './components/UserProfilePage'; // Added UserProfilePage import
 // import SurveyCreator from './components/SurveyCreator';
 import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
 import { Box, CssBaseline } from '@mui/material';
@@ -54,6 +55,9 @@ function AppContent() {
           {/* Redirect /login and /change-password to dashboard if user is already authenticated */}
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/change-password" element={<Navigate to="/" replace />} />
+
+          {/* User Profile Route */}
+          <Route path="/profile" element={<UserProfilePage />} />
 
           {/* Fallback Route - Consider if /dashboard is more appropriate than / if Dashboard is the main landing page */}
           <Route path="*" element={<Navigate to="/" />} />

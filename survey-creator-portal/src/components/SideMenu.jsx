@@ -5,6 +5,7 @@ import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Divi
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import PostAddIcon from '@mui/icons-material/PostAdd'; // Added for Survey Creator
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'; // Added for Profile
 import LogoutIcon from '@mui/icons-material/Logout';
 
 const drawerWidth = 240;
@@ -52,6 +53,12 @@ const SideMenu = () => {
               <PostAddIcon />
             </ListItemIcon>
             <ListItemText primary="Survey Creator" />
+          </ListItemButton>
+          <ListItemButton component={RouterLink} to="/profile">
+            <ListItemIcon>
+              <AccountCircleIcon />
+            </ListItemIcon>
+            <ListItemText primary="Profile" />
           </ListItemButton>
         </List>
       </Box>
