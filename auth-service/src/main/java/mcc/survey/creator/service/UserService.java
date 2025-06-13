@@ -142,28 +142,6 @@ public class UserService {
     }
 
     @Transactional
-    public boolean changePassword(String username, String oldPassword, String newPassword) {
-        Optional<User> userOptional = userRepository.findByUsername(username);
-        if (!userOptional.isPresent()) {
-            log.warn("User not found for password change: {}", username);
-            return false; // Or throw exception
-        }
-        User user = userOptional.get();
-
-        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            log.warn("Old password does not match for user: {}", username);
-            return false; // Or throw exception indicating incorrect old password
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        // IMPORTANT: Update the password expiration date upon successful password change
-        user.setPasswordExpirationDate(LocalDate.now().plusDays(90)); // Assuming 90 days validity
-        userRepository.save(user);
-        log.info("Password changed successfully for user: {}", username);
-        return true;
-    }
-
-    @Transactional
     public boolean resetPassword(String username, String newPassword) { // Signature changed
         try {
             PasswordPolicyValidator.validate(newPassword);
@@ -268,7 +246,7 @@ public class UserService {
         } else {
             CreateUserRequest createUserRequest = new CreateUserRequest();
             createUserRequest.setUsername("admin");
-            createUserRequest.setEmail(null);
+            createUserRequest.setEmail("admin@admin.com");
             createUserRequest.setRoles(Set.of("ROLE_SYSTEM_ADMIN"));
             User user = this.createUser(createUserRequest);
             log.info("System Admin created");

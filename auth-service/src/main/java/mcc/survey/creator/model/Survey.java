@@ -1,10 +1,12 @@
 package mcc.survey.creator.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -16,6 +18,21 @@ public class Survey {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotBlank(message = "Title cannot be blank")
+    private String title;
+
+    @Lob
+    private String description;
+
+    @Lob
+    private String questionsJson; // Stores questions as a JSON string
+
+    @CreationTimestamp
+    private Timestamp createdAt;
+
+    @UpdateTimestamp
+    private Timestamp updatedAt;
 
     private String surveyMode; // e.g., "public", "access_code", "personal_access_code"
 
@@ -55,42 +72,6 @@ public class Survey {
         this.dataClassification = dataClassification;
         this.status = status;
         this.surveyJson = surveyJson;
-    }
-    public User getOwner() {
-        return owner;
-    }
-    public void setOwner(User owner) {
-        this.owner = owner;
-    }
-    public String getSurveyMode() {
-        return surveyMode;
-    } 
-    public void setSurveyMode(String surveyMode) {
-        this.surveyMode = surveyMode;
-    }
-    public String getDataClassification() {
-        return dataClassification;
-    }
-    public void setDataClassification(String dataClassification) {
-        this.dataClassification = dataClassification;
-    }
-    public String getStatus() {
-        return status;
-    }
-    public void setStatus(String status) {
-        this.status = status;
-    }
-    public String getSurveyJson() {
-        return surveyJson;
-    }
-    public void setSurveyJson(String surveyJson) {
-        this.surveyJson = surveyJson;
-    }
-    public Set<User> getSharedWithUsers() {
-        return sharedWithUsers;
-    }
-    public void setSharedWithUsers(Set<User> sharedWithUsers) {
-        this.sharedWithUsers = sharedWithUsers;
     }
 
 

@@ -15,8 +15,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/roles")
-@PreAuthorize("hasAuthority('OP_MANAGE_ROLES')") // Class-level authorization
+@RequestMapping("/api/roles")// Class-level authorization
 public class RoleController {
 
     @Autowired
@@ -29,6 +28,7 @@ public class RoleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('OP_CREATE_ROLES') or hasRole('SYSTEM_ADMIN')") 
     public ResponseEntity<RoleDto> createRole(@Valid @RequestBody CreateRoleRequest createRoleRequest) {
         RoleDto createdRole = roleService.createRole(createRoleRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRole);
@@ -47,12 +47,14 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('OP_UPDATE_ROLES') or hasRole('SYSTEM_ADMIN')") 
     public ResponseEntity<RoleDto> updateRole(@PathVariable Long id, @Valid @RequestBody UpdateRoleRequest updateRoleRequest) {
         RoleDto updatedRole = roleService.updateRole(id, updateRoleRequest);
         return ResponseEntity.ok(updatedRole);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('OP_DELETE_ROLES') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         // Consider adding more checks here, e.g., cannot delete system roles
         // For now, it relies on RoleService's potential checks

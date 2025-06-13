@@ -33,7 +33,7 @@ export const inactivateUser = (userId) => {
 };
 
 export const getRoles = () => {
-  return apiClient.get('/admin/roles').then(response => response.data);
+  return apiClient.get('/roles').then(response => response.data);
 }
 // Add this function to userService.js
 

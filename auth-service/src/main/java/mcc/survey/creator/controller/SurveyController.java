@@ -4,13 +4,19 @@ import mcc.survey.creator.model.Survey;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.SurveyRepository;
 import mcc.survey.creator.repository.UserRepository;
+import mcc.survey.creator.service.SurveyService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,15 +52,14 @@ public class SurveyController {
         return ResponseEntity.ok(surveys);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{surveyId}")
     @PreAuthorize("(hasAuthority('OP_VIEW_OWN_SURVEY') and @surveySecurityService.isOwnerOrSharedUser(authentication, #id)) or hasAuthority('OP_VIEW_ALL_SURVEYS')")
-    public ResponseEntity<Survey> getSurveyById(@PathVariable Long id) {
-        Optional<Survey> surveyOptional = surveyRepository.findById(id);
-        if (surveyOptional.isPresent()) {
-            return ResponseEntity.ok(surveyOptional.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Survey> getSurveyById(@PathVariable Long surveyId) {
+        String userId = getCurrentUserId();
+        Optional<Survey> surveyOptional = surveyService.getSurveyByIdAndUsername(surveyId, userId);
+        return surveyOptional
+                .map(survey -> new ResponseEntity<>(survey, HttpStatus.OK))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/{id}/share/{userId}")
@@ -103,34 +108,59 @@ public class SurveyController {
     }
 
 
-    @PutMapping("/{id}")
+    @PutMapping("/{surveyId}")
     @PreAuthorize("hasAuthority('OP_EDIT_OWN_SURVEY') and @surveySecurityService.isOwner(authentication, #id)")
-    public ResponseEntity<Survey> updateSurvey(@PathVariable Long id, @RequestBody Survey surveyDetails) {
-        Optional<Survey> surveyOptional = surveyRepository.findById(id);
-        if (surveyOptional.isPresent()) {
-            Survey survey = surveyOptional.get();
-            // Ownership is checked by @PreAuthorize
-            survey.setSurveyMode(surveyDetails.getSurveyMode());
-            survey.setDataClassification(surveyDetails.getDataClassification());
-            survey.setStatus(surveyDetails.getStatus());
-            survey.setSurveyJson(surveyDetails.getSurveyJson());
-            Survey updatedSurvey = surveyRepository.save(survey);
-            return ResponseEntity.ok(updatedSurvey);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Survey> updateSurvey(@PathVariable Long surveyId, @RequestBody Survey surveyDetails) {
+        String userId = getCurrentUserId();
+        // ResourceNotFoundException will be thrown by the service if not found / not owned
+        Survey updatedSurvey = surveyService.updateSurvey(surveyId, surveyDetails, userId);
+        return new ResponseEntity<>(updatedSurvey, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{surveyId}")
     @PreAuthorize("hasAuthority('OP_DELETE_OWN_SURVEY') and @surveySecurityService.isOwner(authentication, #id)")
-    public ResponseEntity<Void> deleteSurvey(@PathVariable Long id) {
-        Optional<Survey> surveyOptional = surveyRepository.findById(id);
-        if (surveyOptional.isPresent()) {
-            // Ownership is checked by @PreAuthorize
-            surveyRepository.delete(surveyOptional.get());
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Void> deleteSurvey(@PathVariable Long surveyId) {
+        String userId = getCurrentUserId();
+        // ResourceNotFoundException will be thrown by the service if not found / not owned
+        surveyService.deleteSurvey(surveyId, userId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+
+    private final SurveyService surveyService;
+    // private final UserService userService; // Inject if using userService.getCurrentUserId()
+
+    @Autowired
+    public SurveyController(SurveyService surveyService /*, UserService userService */) {
+        this.surveyService = surveyService;
+        // this.userService = userService;
+    }
+
+    // Placeholder for getting current user ID. Replace with Spring Security context later.
+    private String getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+             return ((UserDetails) principal).getUsername(); // Or a custom User object with an ID
+        } else if (principal instanceof String) {
+             return (String) principal;
+        }
+        return "anonymousUser"; // Or throw an exception if user must be authenticated
+        
+    }
+
+    @GetMapping
+    public List<Survey> getSurveysForCurrentUser() {
+        String username = getCurrentUserId();
+        return surveyService.getSurveysByUsername(username);
+    }
+
+    @PostMapping
+    public ResponseEntity<Survey> createSurvey(@Valid @RequestBody Survey survey) {
+        String userId = getCurrentUserId();
+        Survey createdSurvey = surveyService.createSurvey(survey, userId);
+        return new ResponseEntity<>(createdSurvey, HttpStatus.CREATED);
+    }
+
+
+
 }
