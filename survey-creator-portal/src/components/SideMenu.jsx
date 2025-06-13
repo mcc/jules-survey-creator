@@ -48,6 +48,12 @@ const SideMenu = () => {
             </ListItemIcon>
             <ListItemText primary="Users" />
           </ListItemButton>
+          <ListItemButton component={RouterLink} to="/survey-list">
+            <ListItemIcon>
+              <PostAddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Survey List" />
+          </ListItemButton>
           <ListItemButton component={RouterLink} to="/survey-creator">
             <ListItemIcon>
               <PostAddIcon />

@@ -6,7 +6,7 @@ export const getSurveysByUser = async (userId) => {
   try {
     // Assuming the backend endpoint /api/surveys is secured and returns surveys for the authenticated user.
     // If the backend specifically needs the userId in the query params: apiClient.get(`/api/surveys?userId=${userId}`);
-    const response = await apiClient.get('/api/surveys');
+    const response = await apiClient.get('/surveys');
     return response.data;
   } catch (error) {
     console.error('Error fetching surveys by user:', error);
@@ -16,7 +16,7 @@ export const getSurveysByUser = async (userId) => {
 
 export const getSurvey = async (surveyId) => {
   try {
-    const response = await apiClient.get(`/api/surveys/${surveyId}`);
+    const response = await apiClient.get(`/surveys/${surveyId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching survey with ID ${surveyId}:`, error);
@@ -26,7 +26,7 @@ export const getSurvey = async (surveyId) => {
 
 export const createSurvey = async (surveyData) => {
   try {
-    const response = await apiClient.post('/api/surveys', surveyData);
+    const response = await apiClient.post('/surveys', surveyData);
     return response.data;
   } catch (error) {
     console.error('Error creating survey:', error);
@@ -36,7 +36,7 @@ export const createSurvey = async (surveyData) => {
 
 export const updateSurvey = async (surveyId, surveyData) => {
   try {
-    const response = await apiClient.put(`/api/surveys/${surveyId}`, surveyData);
+    const response = await apiClient.put(`/surveys/${surveyId}`, surveyData);
     return response.data;
   } catch (error) {
     console.error(`Error updating survey with ID ${surveyId}:`, error);
@@ -46,7 +46,7 @@ export const updateSurvey = async (surveyId, surveyData) => {
 
 export const deleteSurvey = async (surveyId) => {
   try {
-    const response = await apiClient.delete(`/api/surveys/${surveyId}`);
+    const response = await apiClient.delete(`/surveys/${surveyId}`);
     return response.data; // Or handle 204 No Content appropriately (data might be undefined)
   } catch (error) {
     console.error(`Error deleting survey with ID ${surveyId}:`, error);

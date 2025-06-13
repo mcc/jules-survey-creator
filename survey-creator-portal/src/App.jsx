@@ -15,6 +15,7 @@ import UserProfilePage from './components/UserProfilePage'; // Added UserProfile
 import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
 import { Box, CssBaseline } from '@mui/material';
 import './App.css';
+import SurveyList from './components/SurveyList';
 
 // Helper component to encapsulate the conditional rendering logic
 function AppContent() {
@@ -74,6 +75,8 @@ function AppContent() {
           {/* Survey Creator Route */}
           <Route path="/survey-creator" element={<SurveyJsCreatorComponent />} />
 
+          {/* Survey Creator Route */}
+          <Route path="/survey-list" element={<SurveyList />} />
           {/* Redirect /login, /forgot-password, /reset-password to dashboard if user is already authenticated */}
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/forgot-password" element={<Navigate to="/" replace />} />
