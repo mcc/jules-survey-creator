@@ -1,4 +1,5 @@
 import React from 'react';
+import QuestionTableView from './QuestionTableView'; // Import QuestionTableView
 
 // Re-using modal styles (ideally, these would be in a shared CSS file)
 const modalStyle = {
@@ -21,50 +22,31 @@ const modalContentStyle = {
   maxHeight: '80vh',
   overflowY: 'auto',
   minWidth: '60%', // Adjusted for potentially more content
+  maxWidth: '90%', // Ensure modal is not too wide
 };
 
-function PreviewModal({ isOpen, onClose, questions }) {
+function PreviewModal({ isOpen, onClose, surveyJson }) { // Changed props
   if (!isOpen) {
     return null;
   }
 
+  // Extract questions from surveyJson
+  // SurveyJS stores questions in pages[0].elements
+  // Handle cases where surveyJson might be null or pages/elements are missing
+  const questions = surveyJson?.pages?.[0]?.elements || [];
+
   return (
     <div style={modalStyle} onClick={onClose}>
       <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
-        <h2>Survey Preview</h2>
-        {questions.map((question, index) => (
-          <div key={question.id || index} style={{ marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-            <h3>{index + 1}. {question.title}</h3>
-            <p>{question.description}</p>
-            <div>
-              {question.answerType === 'text' && (
-                <input type="text" disabled placeholder="Your answer here" style={{ width: '80%', padding: '8px' }} />
-              )}
-              {question.answerType === 'textarea' && (
-                <textarea disabled placeholder="Your detailed answer here" style={{ width: '80%', padding: '8px', minHeight: '80px' }} />
-              )}
-              {(question.answerType === 'radio' || question.answerType === 'checkbox') && question.options && (
-                <div>
-                  {question.options.map((option, optIndex) => (
-                    <div key={optIndex} style={{ margin: '5px 0' }}>
-                      <input
-                        type={question.answerType}
-                        name={`question-${question.id}`} // Group radio buttons
-                        id={`q${question.id}-opt${optIndex}`}
-                        value={option}
-                        disabled
-                      />
-                      <label htmlFor={`q${question.id}-opt${optIndex}`} style={{ marginLeft: '8px' }}>
-                        {option}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        <button onClick={onClose} style={{ marginTop: '20px' }}>Close</button>
+        <h2>Survey Questions Preview</h2>
+        {questions.length > 0 ? (
+          <QuestionTableView questions={questions} />
+        ) : (
+          <p>This survey currently has no questions to display.</p>
+        )}
+        <button onClick={onClose} style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer' }}>
+          Close
+        </button>
       </div>
     </div>
   );

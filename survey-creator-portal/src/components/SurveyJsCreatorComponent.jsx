@@ -4,6 +4,8 @@ import { getSurvey } from '../services/surveyService.js';
 import { SurveyCreatorModel  } from 'survey-creator-core';
 import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
 import { AuthContext } from '../contexts/AuthContext';
+import PreviewModal from './PreviewModal';
+import QuestionTableView from './QuestionTableView';
 // components/SurveyCreator.tsx
 import "survey-core/survey-core.css";
 import "survey-creator-core/survey-creator-core.css";
@@ -41,6 +43,7 @@ function SurveyJsCreatorComponent({ json, options }) {
   const [status, setStatus] = useState('drafted');
   const [shareWithUsername, setShareWithUsername] = useState('');
   const [sharedUsersList, setSharedUsersList] = useState([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   let [creator, setCreator] = useState();
 
   if (!creator) {
@@ -313,8 +316,16 @@ creator.saveSurveyFunc = (saveNo, callback) => {
   };
 
   return (<div>
-            <div style={{ padding: '10px', backgroundColor: '#f0f0f0', marginBottom: '10px' }}>
+            <div style={{ padding: '10px', backgroundColor: '#f0f0f0', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3>Survey Settings</h3>
+                <div> {/* Container for buttons */}
+                    <button onClick={() => setShowPreviewModal(true)} style={{ marginRight: '10px' }}>
+                        Preview Survey
+                    </button>
+                    {/* Existing settings can be grouped or styled as needed */}
+                </div>
+            </div>
+            <div style={{ padding: '10px', backgroundColor: '#f0f0f0', marginBottom: '10px' }}>
                 <label htmlFor="surveyIdDisplay" style={{ marginRight: '10px' }}>Survey ID: </label>
                 <span id="surveyIdDisplay" style={{ marginRight: '20px', fontWeight:'bold' }}>{surveyId || 'New Survey'}</span>
                 <br/>
@@ -385,6 +396,13 @@ creator.saveSurveyFunc = (saveNo, callback) => {
     <div style={{ height: "100vh", width: "100%" }}>
       <SurveyCreatorComponent creator={creator} />
     </div>
+    {showPreviewModal && (
+        <PreviewModal
+            isOpen={showPreviewModal}
+            onClose={() => setShowPreviewModal(false)}
+            surveyJson={creator.JSON}
+        />
+    )}
     </div>
   );
 }
