@@ -1,6 +1,7 @@
 package mcc.survey.creator.security;
 
 import mcc.survey.creator.model.Role;
+import mcc.survey.creator.service.ConfigurationService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -25,8 +26,6 @@ import java.util.stream.Collectors;
 @Component
 public class JwtTokenProvider {
     private Logger logger = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider.class);
-    @Value("${app.jwt.secret}")
-    private String jwtSecret;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
@@ -37,14 +36,17 @@ public class JwtTokenProvider {
     private Key key;
 
     private final UserDetailsService userDetailsService;
+    private final ConfigurationService configurationService;
 
-    public JwtTokenProvider(UserDetailsService userDetailsService) {
+    public JwtTokenProvider(UserDetailsService userDetailsService, ConfigurationService configurationService) {
         this.userDetailsService = userDetailsService;
+        this.configurationService = configurationService;
     }
 
     @PostConstruct
     protected void init() {
-        key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        String jwtSecretString = configurationService.getRequiredConfigValue("app.jwt.secret");
+        key = Keys.hmacShaKeyFor(jwtSecretString.getBytes());
     }
 
     public String generateToken(Authentication authentication) {
