@@ -14,6 +14,62 @@ export const getSurveysByUser = async (userId) => {
   }
 };
 
+// Fetches survey details, which should include shared users
+export const fetchSharedUsers = async (surveyId) => {
+  try {
+    const response = await apiClient.get(`/surveys/${surveyId}`);
+    // Assuming response.data is the survey object and it contains a sharedWithUsers array
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching shared users for survey ID ${surveyId}:`, error);
+    // It's good to check error.response for backend-specific messages
+    if (error.response) {
+      throw new Error(error.response.data.message || `Failed to fetch shared users for survey ${surveyId}`);
+    }
+    throw error;
+  }
+};
+
+export const shareSurvey = async (surveyId, username) => {
+  try {
+    // Step 1: Get User ID by Username
+    const userResponse = await apiClient.get(`/auth/users/by-username/${username.trim()}`);
+    const userIdToShare = userResponse.data.id;
+
+    if (!userIdToShare) {
+      throw new Error(`User ID not found for username: ${username.trim()}`);
+    }
+
+    // Step 2: Share the Survey
+    const shareResponse = await apiClient.post(`/surveys/${surveyId}/share/${userIdToShare}`, {});
+    return shareResponse.data;
+  } catch (error) {
+    console.error(`Error sharing survey ID ${surveyId} with username ${username}:`, error);
+    // Check for specific error messages from the backend if available
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.message.includes('404')) { // Basic check for user not found from the first call
+        throw new Error(`User "${username.trim()}" not found.`);
+    }
+    throw error; // Re-throw original error if no specific message is found
+  }
+};
+
+export const unshareSurvey = async (surveyId, userIdToUnshare) => {
+  try {
+    const response = await apiClient.delete(`/surveys/${surveyId}/unshare/${userIdToUnshare}`);
+    // For DELETE requests, a 204 No Content is common, in which case response.data might be empty.
+    // The calling component should be prepared for this.
+    return response.data;
+  } catch (error) {
+    console.error(`Error unsharing survey ID ${surveyId} from user ID ${userIdToUnshare}:`, error);
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
+    }
+    throw error;
+  }
+};
+
 export const getSurvey = async (surveyId) => {
   try {
     const response = await apiClient.get(`/surveys/${surveyId}`);
