@@ -13,6 +13,14 @@ import Dashboard from './components/Dashboard';
 import UserProfilePage from './components/UserProfilePage'; // Added UserProfilePage import
 // import SurveyCreator from './components/SurveyCreator';
 import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
+import {
+    getSurvey,
+    createSurvey,
+    updateSurvey,
+    fetchSharedUsers, // Placeholder: To be implemented in surveyService.js
+    shareSurvey,      // Placeholder: To be implemented in surveyService.js
+    unshareSurvey     // Placeholder: To be implemented in surveyService.js
+} from '../services/surveyService.js';
 import { Box, CssBaseline } from '@mui/material';
 import './index.css';
 import SurveyList from './components/SurveyList';
@@ -76,7 +84,19 @@ function AppContent() {
           <Route path="/admin/users/:userId/edit" element={<UserForm />} />
 
           {/* Survey Creator Route */}
-          <Route path="/survey-creator/:surveyId?" element={<SurveyJsCreatorComponent />} />
+          <Route
+            path="/survey-creator/:surveyId?"
+            element={
+              <SurveyJsCreatorComponent
+                onGetSurvey={getSurvey}
+                onCreateSurvey={createSurvey}
+                onUpdateSurvey={updateSurvey}
+                onFetchSharedUsers={fetchSharedUsers} // Pass placeholder
+                onShareSurvey={shareSurvey}         // Pass placeholder
+                onUnshareSurvey={unshareSurvey}     // Pass placeholder
+              />
+            }
+          />
 
           {/* Survey Creator Route */}
           <Route path="/survey-list" element={<SurveyList />} />

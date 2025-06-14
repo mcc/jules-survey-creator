@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getSurvey } from '../services/surveyService.js';
+// import { getSurvey } from '../services/surveyService.js'; // Removed as per refactor
 import { SurveyCreatorModel  } from 'survey-creator-core';
 import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
 import { AuthContext } from '../contexts/AuthContext';
@@ -33,9 +33,9 @@ const defaultCreatorOptions = {
   collapseOnDrag: true
 };
 
-function SurveyJsCreatorComponent({ json, options }) {
+function SurveyJsCreatorComponent({ json, options, onGetSurvey, onCreateSurvey, onUpdateSurvey, onFetchSharedUsers, onShareSurvey, onUnshareSurvey }) {
   
-  const { token, user } = useContext(AuthContext); // Assuming 'user' is available in AuthContext
+  const { user } = useContext(AuthContext); // Removed token, user might still be needed for ownership check
   const { surveyId: surveyIdFromParams } = useParams();
   const [surveyId, setSurveyId] = useState(null);
   const [surveyMode, setSurveyMode] = useState('public');
@@ -53,9 +53,9 @@ function SurveyJsCreatorComponent({ json, options }) {
 
     useEffect(() => {
         const loadSurvey = async () => {
-            if (surveyIdFromParams && token && user) { // Ensure token and user are available
+            if (surveyIdFromParams && user && onGetSurvey) { // Ensure user and onGetSurvey are available
                 try {
-                    const fetchedSurvey = await getSurvey(surveyIdFromParams, token); // Pass token if getSurvey requires it
+                    const fetchedSurvey = await onGetSurvey(surveyIdFromParams); // Use onGetSurvey prop
 
                     // Ownership check using username:
                     // Assumes backend will provide ownerUsername in fetchedSurvey.
@@ -111,207 +111,133 @@ function SurveyJsCreatorComponent({ json, options }) {
         if (creator) { // Ensure creator instance exists
             loadSurvey();
         }
-        // This effect should run when surveyIdFromParams changes, or when creator/token/user are initialized.
-    }, [creator, surveyIdFromParams, token, user]);
+        // This effect should run when surveyIdFromParams changes, or when creator/user/onGetSurvey are initialized.
+    }, [creator, surveyIdFromParams, user, onGetSurvey]);
 
     // Effect to fetch shared users when surveyId changes (e.g., after load or new save)
     useEffect(() => {
-        if (surveyId) {
+        if (surveyId && onFetchSharedUsers) {
             fetchSharedUsers(surveyId);
         } else {
             setSharedUsersList([]); // Clear if no surveyId
         }
-    }, [surveyId, token]); // Depends on surveyId and token (for fetchSharedUsers)
+    }, [surveyId, onFetchSharedUsers]); // Depends on surveyId and onFetchSharedUsers
 creator.saveSurveyFunc = (saveNo, callback) => {
         const surveyJsonToSave = creator.JSON; // surveyJson is the SurveyJS definition
         console.log("Attempting to save survey JSON:", surveyJsonToSave);
 
+        const surveyJsonToSave = creator.JSON; // surveyJson is the SurveyJS definition
+        console.log("Attempting to save survey JSON:", surveyJsonToSave);
+
         const surveyData = {
-            surveyJson: surveyJsonToSave, // This key should match the backend DTO field for SurveyJS JSON
+            surveyJson: surveyJsonToSave,
             surveyMode: surveyMode,
             dataClassification: dataClassification,
             status: status
         };
 
-        let requestMethod = 'POST';
-        let apiUrl = '/api/surveys/';
-
         if (surveyId) {
-            requestMethod = 'PUT';
-            apiUrl = `/api/surveys/${surveyId}`;
-        }
-
-        console.log(`Saving survey. Method: ${requestMethod}, URL: ${apiUrl}, Data:`, surveyData);
-
-        fetch(apiUrl, {
-            method: requestMethod,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(surveyData)
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
+            if (onUpdateSurvey) {
+                onUpdateSurvey(surveyId, surveyData)
+                    .then(savedSurvey => {
+                        console.log("Survey updated successfully:", savedSurvey);
+                        setSurveyId(savedSurvey.id);
+                        setSurveyMode(savedSurvey.surveyMode);
+                        setDataClassification(savedSurvey.dataClassification);
+                        setStatus(savedSurvey.status);
+                        // creator.JSON = savedSurvey.surveyJson; // Optional: if backend returns modified JSON
+                        callback(saveNo, true);
+                    })
+                    .catch(error => {
+                        console.error("Error during survey update operation:", error);
+                        callback(saveNo, false);
+                    });
             } else {
-                response.text().then(text => {
-                    console.error(`Error saving survey. Status: ${response.status}, Response: ${text}`);
-                });
-                throw new Error(`Save failed: ${response.statusText} (Status: ${response.status})`);
+                console.error("onUpdateSurvey function not provided.");
+                callback(saveNo, false);
             }
-        })
-        .then(savedSurvey => {
-            console.log("Survey saved successfully:", savedSurvey);
-            setSurveyId(savedSurvey.id); // Update surveyId state with the ID from backend response
-            // Optionally, update other states if backend modifies them (e.g. creationDate, modificationDate)
-            // For instance, if the backend returns the full survey object including the JSON:
-            // creator.JSON = savedSurvey.surveyJson;
-            // ^ Be careful with this if surveyJson is very large or if you only want to update metadata
-
-            // Also update state for metadata fields if the backend could have modified them
-            // or if it's a new survey and these are now definitively set.
-            setSurveyMode(savedSurvey.surveyMode);
-            setDataClassification(savedSurvey.dataClassification);
-            setStatus(savedSurvey.status);
-
-            callback(saveNo, true);
-        })
-        .catch(error => {
-            console.error("Error during survey save operation:", error);
-            callback(saveNo, false);
-        });
+        } else {
+            if (onCreateSurvey) {
+                onCreateSurvey(surveyData)
+                    .then(savedSurvey => {
+                        console.log("Survey created successfully:", savedSurvey);
+                        setSurveyId(savedSurvey.id);
+                        setSurveyMode(savedSurvey.surveyMode);
+                        setDataClassification(savedSurvey.dataClassification);
+                        setStatus(savedSurvey.status);
+                        // creator.JSON = savedSurvey.surveyJson; // Optional: if backend returns modified JSON
+                        callback(saveNo, true);
+                    })
+                    .catch(error => {
+                        console.error("Error during survey create operation:", error);
+                        callback(saveNo, false);
+                    });
+            } else {
+                console.error("onCreateSurvey function not provided.");
+                callback(saveNo, false);
+            }
+        }
     };
 
   const fetchSharedUsers = async (currentSurveyId) => {
-    if (!currentSurveyId) {
+    if (!currentSurveyId || !onFetchSharedUsers) {
       setSharedUsersList([]);
+      if (!onFetchSharedUsers) console.error("onFetchSharedUsers function not provided.");
       return;
     }
-    if (!token) {
-        console.error("No token available for fetching shared users.");
-        alert("Authentication token not found. Please log in again.");
-        return;
-    }
     try {
-      const response = await fetch(`/api/surveys/${currentSurveyId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch survey details to get shared users: ${response.statusText}`);
-      }
-      const surveyData = await response.json();
-      // Assuming surveyData.sharedWithUsers is an array of objects like { id: 1, username: "user1", ...other User fields }
-      // The backend Survey entity has a Set<User> sharedWithUsers.
-      // The User model has id and username.
-      // So, surveyData.sharedWithUsers should be compatible.
+      const surveyData = await onFetchSharedUsers(currentSurveyId);
       setSharedUsersList(surveyData.sharedWithUsers ? surveyData.sharedWithUsers.map(u => ({id: u.id, username: u.username})) : []);
     } catch (error) {
       console.error("Error fetching shared users:", error);
       alert("Error fetching shared users list.");
-      setSharedUsersList([]); // Clear list on error
+      setSharedUsersList([]);
     }
   };
 
   const handleShareSurvey = async () => {
-    if (!surveyId || !shareWithUsername.trim()) {
-      alert("Please select a survey and enter a username to share with.");
+    if (!surveyId || !shareWithUsername.trim() || !onShareSurvey) {
+      alert("Please select a survey, enter a username, and ensure share functionality is available.");
+      if (!onShareSurvey) console.error("onShareSurvey function not provided.");
       return;
-    }
-    if (!token) {
-      alert("Authentication token not found. Please log in again.");
-      return;
-    }
-
-    let userIdToShare;
-    try {
-      // Step 1: Get User ID by Username
-      const userResponse = await fetch(`/api/auth/users/by-username/${shareWithUsername.trim()}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!userResponse.ok) {
-        if (userResponse.status === 404) {
-          alert(`User "${shareWithUsername.trim()}" not found.`);
-        } else {
-          alert(`Error finding user: ${userResponse.statusText}`);
-        }
-        return;
-      }
-      const userData = await userResponse.json();
-      userIdToShare = userData.id;
-
-      // Prevent sharing with oneself if the current user is the one being shared with
-      // This requires knowing the current user's ID or username.
-      // For now, this check is omitted but can be added if context provides current user info.
-      // Also, the backend already prevents sharing with the owner if that's the case.
-
-    } catch (error) {
-      console.error("Error fetching user by username:", error);
-      alert("An error occurred while trying to find the user.");
-      return;
-    }
-
-    if (!userIdToShare) {
-        alert("Could not find user ID to share."); // Should be caught by previous checks
-        return;
     }
 
     try {
-      // Step 2: Share the Survey
-      const shareResponse = await fetch(`/api/surveys/${surveyId}/share/${userIdToShare}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!shareResponse.ok) {
-        // Try to get more details from backend error
-        const errorData = await shareResponse.json().catch(() => null);
-        if (shareResponse.status === 400 && errorData && errorData.message && errorData.message.includes("already shared")) {
-             alert(`Survey is already shared with user ${shareWithUsername.trim()}.`);
-        } else if (shareResponse.status === 400 && errorData && errorData.message && errorData.message.includes("cannot share with the owner")) {
-            alert(`Cannot share the survey with its owner (${shareWithUsername.trim()}).`);
-        }
-        else {
-            alert(`Error sharing survey: ${shareResponse.statusText}`);
-        }
-        return;
-      }
-
+      await onShareSurvey(surveyId, shareWithUsername.trim());
       alert(`Survey shared successfully with ${shareWithUsername.trim()}!`);
       setShareWithUsername(''); // Clear input
       fetchSharedUsers(surveyId); // Refresh list
     } catch (error) {
       console.error("Error sharing survey:", error);
-      alert("An error occurred while trying to share the survey.");
+      // Assuming error object might have a message from the backend or a generic one
+      const errorMessage = error.response?.data?.message || error.message || "An error occurred while trying to share the survey.";
+      if (errorMessage.includes("already shared")) {
+           alert(`Survey is already shared with user ${shareWithUsername.trim()}.`);
+      } else if (errorMessage.includes("cannot share with the owner")) {
+          alert(`Cannot share the survey with its owner (${shareWithUsername.trim()}).`);
+      } else if (errorMessage.includes("not found")) {
+          alert(`User "${shareWithUsername.trim()}" not found.`);
+      }
+      else {
+          alert(errorMessage);
+      }
     }
   };
 
   const handleUnshareSurvey = async (userIdToUnshare) => {
-    if (!surveyId || !userIdToUnshare) {
-      alert("Survey ID or User ID to unshare is missing.");
-      return;
-    }
-    if (!token) {
-      alert("Authentication token not found. Please log in again.");
+    if (!surveyId || !userIdToUnshare || !onUnshareSurvey) {
+      alert("Survey ID, User ID to unshare is missing, or unshare functionality is unavailable.");
+      if(!onUnshareSurvey) console.error("onUnshareSurvey function not provided.");
       return;
     }
 
     try {
-      const response = await fetch(`/api/surveys/${surveyId}/unshare/${userIdToUnshare}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        alert(`Error unsharing survey: ${response.statusText}`);
-        return;
-      }
-
+      await onUnshareSurvey(surveyId, userIdToUnshare);
       alert("User unshared successfully!");
       fetchSharedUsers(surveyId); // Refresh list
     } catch (error) {
       console.error("Error unsharing survey:", error);
-      alert("An error occurred while trying to unshare the survey.");
+      alert(error.message || "An error occurred while trying to unshare the survey.");
     }
   };
 
