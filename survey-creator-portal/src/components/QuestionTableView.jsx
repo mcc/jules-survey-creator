@@ -1,5 +1,5 @@
 import React from 'react';
-import './QuestionTableView.css';
+import '../index.css';
 
 function QuestionTableView({ questions }) {
   if (!questions || questions.length === 0) {
