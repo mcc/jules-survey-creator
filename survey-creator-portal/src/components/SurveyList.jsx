@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getSurveysByUser } from '../services/surveyService.js';
 import { Button, List, ListItem, ListItemText, Typography, Box, Paper, IconButton } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -7,6 +8,7 @@ import PublishIcon from '@mui/icons-material/Publish';
 import UnpublishedIcon from '@mui/icons-material/Unpublished';
 
 const SurveyList = () => {
+  const navigate = useNavigate();
   const [surveys, setSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +41,7 @@ const SurveyList = () => {
         <Typography variant="h4" component="h1">
           My Surveys
         </Typography>
-        <Button variant="contained" color="primary">
+        <Button variant="contained" color="primary" onClick={() => navigate('/survey-creator')}>
           Create New Survey
         </Button>
       </Box>
@@ -56,7 +58,7 @@ const SurveyList = () => {
               divider
               secondaryAction={
                 <>
-                  <IconButton edge="end" aria-label="edit" sx={{ mr: 1 }}>
+                  <IconButton edge="end" aria-label="edit" sx={{ mr: 1 }} onClick={() => navigate(`/survey-creator/${survey.id}`)}>
                     <EditIcon />
                   </IconButton>
                   <IconButton edge="end" aria-label={survey.status === 'draft' ? 'publish' : 'unpublish'} sx={{ mr: 1 }}>

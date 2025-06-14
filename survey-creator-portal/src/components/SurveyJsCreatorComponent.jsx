@@ -1,4 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { getSurvey } from '../services/surveyService.js';
 import { SurveyCreatorModel  } from 'survey-creator-core';
 import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
 import { AuthContext } from '../contexts/AuthContext';
@@ -31,7 +33,8 @@ const defaultCreatorOptions = {
 
 function SurveyJsCreatorComponent({ json, options }) {
   
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext); // Assuming 'user' is available in AuthContext
+  const { surveyId: surveyIdFromParams } = useParams();
   const [surveyId, setSurveyId] = useState(null);
   const [surveyMode, setSurveyMode] = useState('public');
   const [dataClassification, setDataClassification] = useState('public');
@@ -46,21 +49,67 @@ function SurveyJsCreatorComponent({ json, options }) {
   }
 
     useEffect(() => {
-        creator.JSON = { // Set default JSON for a new survey
-            elements: [{
-                name: "question1",
-                type: "text",
-                title: "New Survey - Edit Me"
-            }],
+        const loadSurvey = async () => {
+            if (surveyIdFromParams && token && user) { // Ensure token and user are available
+                try {
+                    const fetchedSurvey = await getSurvey(surveyIdFromParams, token); // Pass token if getSurvey requires it
+
+                    // Ownership check using username:
+                    // Assumes backend will provide ownerUsername in fetchedSurvey.
+                    // Logged-in user's username is in user.sub (from JWT's subject claim).
+                    if (fetchedSurvey.ownerUsername !== user.sub) { // ***** USER OWNERSHIP CHECK *****
+                        alert("Error: You are not authorized to edit this survey, or the survey does not exist, or owner information is missing.");
+                        // Reset to new survey state
+                        if (creator) {
+                             creator.JSON = defaultJson; // Or your preferred default JSON for new surveys
+                        }
+                        setSurveyId(null);
+                        setSurveyMode('public');
+                        setDataClassification('public');
+                        setStatus('drafted');
+                        setSharedUsersList([]);
+                        return;
+                    }
+
+                    // If authorized, load the survey
+                    creator.JSON = fetchedSurvey.surveyJson;
+                    setSurveyId(fetchedSurvey.id); // Update state surveyId with the loaded survey's ID
+                    setSurveyMode(fetchedSurvey.surveyMode);
+                    setDataClassification(fetchedSurvey.dataClassification);
+                    setStatus(fetchedSurvey.status);
+                    // Shared users will be fetched by the existing useEffect dependent on `surveyId` state
+                } catch (error) {
+                    console.error("Error fetching survey:", error);
+                    // Check if the error is due to 404 Not Found or 403 Forbidden specifically
+                    if (error.response && (error.response.status === 404 || error.response.status === 403)) {
+                        alert("Error: Survey not found or you do not have permission to access it.");
+                    } else {
+                        alert("Failed to load survey. Please try again.");
+                    }
+                    // Reset to new survey state in case of error
+                    creator.JSON = defaultJson;
+                    setSurveyId(null);
+                    setSurveyMode('public');
+                    setDataClassification('public');
+                    setStatus('drafted');
+                    setSharedUsersList([]);
+                }
+            } else if (!surveyIdFromParams) {
+                // No surveyId in params, so it's a new survey
+                creator.JSON = defaultJson; // Your default JSON for new surveys
+                setSurveyId(null);
+                setSurveyMode('public');
+                setDataClassification('public');
+                setStatus('drafted');
+                setSharedUsersList([]);
+            }
         };
-        // Reset metadata states for a new survey
-        setSurveyId(null);
-        setSurveyMode('public');
-        setDataClassification('public');
-        setStatus('drafted');
-        setSharedUsersList([]); // Reset shared users list for a new survey
-        // }
-    }, [creator, token]); // Initial setup effect
+
+        if (creator) { // Ensure creator instance exists
+            loadSurvey();
+        }
+        // This effect should run when surveyIdFromParams changes, or when creator/token/user are initialized.
+    }, [creator, surveyIdFromParams, token, user]);
 
     // Effect to fetch shared users when surveyId changes (e.g., after load or new save)
     useEffect(() => {

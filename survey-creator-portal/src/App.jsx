@@ -73,7 +73,7 @@ function AppContent() {
           <Route path="/admin/users/:userId/edit" element={<UserForm />} />
 
           {/* Survey Creator Route */}
-          <Route path="/survey-creator" element={<SurveyJsCreatorComponent />} />
+          <Route path="/survey-creator/:surveyId?" element={<SurveyJsCreatorComponent />} />
 
           {/* Survey Creator Route */}
           <Route path="/survey-list" element={<SurveyList />} />
