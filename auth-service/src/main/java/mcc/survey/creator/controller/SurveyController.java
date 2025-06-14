@@ -1,5 +1,7 @@
 package mcc.survey.creator.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import mcc.survey.creator.dto.SurveyCreationRequestDTO;
 import mcc.survey.creator.model.Survey;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.SurveyRepository;
@@ -33,7 +35,23 @@ public class SurveyController {
 
     @PostMapping("/")
     @PreAuthorize("hasAuthority('OP_CREATE_SURVEY')")
-    public ResponseEntity<Survey> createSurvey(@RequestBody Survey survey, Authentication authentication) {
+    public ResponseEntity<Survey> createSurvey(@RequestBody SurveyCreationRequestDTO surveyDTO, Authentication authentication) {
+        Survey survey = new Survey();
+        survey.setTitle(surveyDTO.getTitle());
+        survey.setDescription(surveyDTO.getDescription());
+        survey.setSurveyMode(surveyDTO.getSurveyMode());
+        survey.setDataClassification(surveyDTO.getDataClassification());
+        survey.setStatus(surveyDTO.getStatus());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            survey.setSurveyJson(objectMapper.writeValueAsString(surveyDTO.getSurveyJson()));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            // Handle exception, perhaps return a BAD_REQUEST response or throw a custom exception
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
         String currentPrincipalName = authentication.getName();
         User user = userRepository.findByUsername(currentPrincipalName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found for token"));
@@ -153,14 +171,5 @@ public class SurveyController {
         String username = getCurrentUserId();
         return surveyService.getSurveysByUsername(username);
     }
-
-    @PostMapping
-    public ResponseEntity<Survey> createSurvey(@Valid @RequestBody Survey survey) {
-        String userId = getCurrentUserId();
-        Survey createdSurvey = surveyService.createSurvey(survey, userId);
-        return new ResponseEntity<>(createdSurvey, HttpStatus.CREATED);
-    }
-
-
 
 }
