@@ -4,8 +4,9 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Default to light theme variables, dark will be applied by prefers-color-scheme or .dark-theme */
+  color: #213547;
+  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,6 +14,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Default link styles (light mode) */
 a {
   font-weight: 500;
   color: #646cff;
@@ -28,6 +30,8 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  /* Transition for background and color changes */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 h1 {
@@ -35,6 +39,7 @@ h1 {
   line-height: 1.1;
 }
 
+/* Default button styles (light mode) */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -42,9 +47,10 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #f9f9f9;
+  color: #213547; /* Text color for light mode buttons */
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s, color 0.25s;
 }
 button:hover {
   border-color: #646cff;
@@ -54,15 +60,220 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Styles for system light preference */
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
     background-color: #ffffff;
   }
+  a {
+    color: #646cff;
+  }
   a:hover {
-    color: #747bff;
+    color: #535bf2; /* Adjusted for consistency */
   }
   button {
     background-color: #f9f9f9;
+    color: #213547;
+  }
+  /* Light mode table styles (if not already default) */
+  table {
+    border-color: #ddd;
+  }
+  th, td {
+    border-color: #ddd;
+    color: #333; /* Default text color for table content */
+  }
+  th {
+    background-color: #f2f2f2;
+    color: #333;
+  }
+  tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  tr:hover {
+    background-color: #e9e9e9;
   }
 }
+
+/* Styles for system dark preference */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f0f0f0;
+    background-color: #121212;
+  }
+  a {
+    color: #bb86fc;
+  }
+  a:hover {
+    color: #9e66de;
+  }
+  button {
+    background-color: #333333;
+    color: #f0f0f0;
+    border-color: #555555;
+  }
+  button:hover {
+    border-color: #bb86fc;
+  }
+  table {
+    border-color: #444444;
+  }
+  th, td {
+    border-color: #444444;
+    color: #f0f0f0;
+  }
+  th {
+    background-color: #252525;
+  }
+  tr:nth-child(even) {
+    background-color: #1e1e1e;
+  }
+  tr:hover {
+    background-color: #303030;
+  }
+}
+
+/* Explicit light theme class */
+.light-theme {
+  color: #213547 !important;
+  background-color: #ffffff !important;
+}
+.light-theme a {
+  color: #646cff !important;
+}
+.light-theme a:hover {
+  color: #535bf2 !important;
+}
+.light-theme button {
+  background-color: #f9f9f9 !important;
+  color: #213547 !important;
+  border-color: transparent !important; /* Reset border color or define specific */
+}
+.light-theme button:hover {
+  border-color: #646cff !important;
+}
+.light-theme table {
+  border-color: #ddd !important;
+}
+.light-theme th, .light-theme td {
+  border-color: #ddd !important;
+  color: #333 !important;
+}
+.light-theme th {
+  background-color: #f2f2f2 !important;
+  color: #333 !important;
+}
+.light-theme tr:nth-child(even) {
+  background-color: #f9f9f9 !important;
+}
+.light-theme tr:hover {
+  background-color: #e9e9e9 !important;
+}
+
+/* Explicit dark theme class */
+.dark-theme {
+  color: #f0f0f0 !important;
+  background-color: #121212 !important;
+}
+.dark-theme a {
+  color: #bb86fc !important;
+}
+.dark-theme a:hover {
+  color: #9e66de !important;
+}
+.dark-theme button {
+  background-color: #333333 !important;
+  color: #f0f0f0 !important;
+  border-color: #555555 !important;
+}
+.dark-theme button:hover {
+  border-color: #bb86fc !important;
+}
+.dark-theme table {
+  border-color: #444444 !important;
+}
+.dark-theme th, .dark-theme td {
+  border-color: #444444 !important;
+  color: #f0f0f0 !important;
+}
+.dark-theme th {
+  background-color: #252525 !important;
+}
+.dark-theme tr:nth-child(even) {
+  background-color: #1e1e1e !important;
+}
+.dark-theme tr:hover {
+  background-color: #303030 !important;
+}
+
+
+/* General Styles (should be compatible with both themes or overridden) */
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888; /* This might need adjustment for dark theme if too light/dark */
+}
+
+/* Basic styles for QuestionTableView (structure, not colors) */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-family: Arial, sans-serif;
+}
+
+th, td {
+  border-width: 1px; /* Define border width, color will be set by themes */
+  border-style: solid; /* Define border style */
+  padding: 8px;
+  text-align: left;
+}
+
+p {
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* body font-family and margin were duplicated, remove one set */
+/* body {
+  font-family: sans-serif;
+  margin: 20px;
+} */

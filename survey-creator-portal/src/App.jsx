@@ -14,8 +14,9 @@ import UserProfilePage from './components/UserProfilePage'; // Added UserProfile
 // import SurveyCreator from './components/SurveyCreator';
 import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
 import { Box, CssBaseline } from '@mui/material';
-import './App.css';
+import './index.css';
 import SurveyList from './components/SurveyList';
+import ThemeToggler from './components/ThemeToggler'; // Import ThemeToggler
 
 // Helper component to encapsulate the conditional rendering logic
 function AppContent() {
@@ -61,10 +62,12 @@ function AppContent() {
 
   // Authenticated user view
   return (
-    <Box sx={{ display: 'flex' }} className="App">
-      <CssBaseline /> {/* Ensures consistent baseline styling */}
-      <SideMenu />
-      <MainPanel>
+    <> {/* Using Fragment to include ThemeToggler alongside the main layout Box */}
+      <ThemeToggler />
+      <Box sx={{ display: 'flex' }} className="App">
+        <CssBaseline /> {/* Ensures consistent baseline styling */}
+        <SideMenu />
+        <MainPanel>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           {/* Admin User Management Routes */}
@@ -103,7 +106,11 @@ function App() {
   // Wrapping with Router here if it's not already higher up in the component tree (e.g. in index.js)
   // Based on the prompt, it seems Router should be here.
   return (
-      <AppContent />
+    // No need to wrap AppContent in Router here as it's already done in main.jsx
+    // Also, AuthProvider is already in main.jsx
+    // This App component primarily defines structure.
+    // The ThemeToggler will be rendered by AppContent when the user is authenticated.
+    <AppContent />
   );
 }
 
