@@ -15,7 +15,14 @@ import UserProfilePage from './components/UserProfilePage';
 import SurveyJsCreatorComponent from './components/SurveyJsCreatorComponent';
 import SurveyList from './components/SurveyList';
 import ThemeToggler from './components/ThemeToggler';
-
+import {
+    getSurvey,
+    createSurvey,
+    updateSurvey,
+    fetchSharedUsers, // Placeholder: To be implemented in surveyService.js
+    shareSurvey,      // Placeholder: To be implemented in surveyService.js
+    unshareSurvey     // Placeholder: To be implemented in surveyService.js
+} from '../services/surveyService.js';
 import { Box, CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { getTheme } from './theme';
@@ -111,7 +118,19 @@ function AppContent() {
           <Route path="/admin/users" element={<UserList />} />
           <Route path="/admin/users/new" element={<UserForm />} />
           <Route path="/admin/users/:userId/edit" element={<UserForm />} />
-          <Route path="/survey-creator/:surveyId?" element={<SurveyJsCreatorComponent />} />
+          <Route
+            path="/survey-creator/:surveyId?"
+            element={
+              <SurveyJsCreatorComponent
+                onGetSurvey={getSurvey}
+                onCreateSurvey={createSurvey}
+                onUpdateSurvey={updateSurvey}
+                onFetchSharedUsers={fetchSharedUsers} // Pass placeholder
+                onShareSurvey={shareSurvey}         // Pass placeholder
+                onUnshareSurvey={unshareSurvey}     // Pass placeholder
+              />
+            }
+          />
           <Route path="/survey-list" element={<SurveyList />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/forgot-password" element={<Navigate to="/" replace />} />

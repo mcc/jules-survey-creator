@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       async (error) => {
         const originalRequest = error.config;
         // Prevent retry loops for login, token refresh endpoint itself, or if already retried
-        if (originalRequest.url === '/login' || originalRequest.url === '/refresh' || originalRequest._retry) {
+        if (originalRequest.url === '/auth/login' || originalRequest.url === '/auth/refresh' || originalRequest._retry) {
           return Promise.reject(error);
         }
 
