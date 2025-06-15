@@ -122,10 +122,7 @@ function SurveyJsCreatorComponent({ json, options, onGetSurvey, onCreateSurvey, 
             setSharedUsersList([]); // Clear if no surveyId
         }
     }, [surveyId, onFetchSharedUsers]); // Depends on surveyId and onFetchSharedUsers
-creator.saveSurveyFunc = (saveNo, callback) => {
-        const surveyJsonToSave = creator.JSON; // surveyJson is the SurveyJS definition
-        console.log("Attempting to save survey JSON:", surveyJsonToSave);
-
+    creator.saveSurveyFunc = (saveNo, callback) => {
         const surveyJsonToSave = creator.JSON; // surveyJson is the SurveyJS definition
         console.log("Attempting to save survey JSON:", surveyJsonToSave);
 

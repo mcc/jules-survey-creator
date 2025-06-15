@@ -82,7 +82,7 @@ export const getSurvey = async (surveyId) => {
 
 export const createSurvey = async (surveyData) => {
   try {
-    const response = await apiClient.post('/surveys', surveyData);
+    const response = await apiClient.post('/surveys/createSurvey', surveyData);
     return response.data;
   } catch (error) {
     console.error('Error creating survey:', error);

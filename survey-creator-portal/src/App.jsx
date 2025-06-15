@@ -22,7 +22,7 @@ import {
     fetchSharedUsers, // Placeholder: To be implemented in surveyService.js
     shareSurvey,      // Placeholder: To be implemented in surveyService.js
     unshareSurvey     // Placeholder: To be implemented in surveyService.js
-} from '../services/surveyService.js';
+} from './services/surveyService.js';
 import { Box, CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { getTheme } from './theme';

@@ -8,6 +8,7 @@ import mcc.survey.creator.repository.SurveyRepository;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.service.SurveyService;
 
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/surveys")
 public class SurveyController {
+    Logger logger = org.slf4j.LoggerFactory.getLogger(SurveyController.class);
 
     @Autowired
     private SurveyRepository surveyRepository;
@@ -33,12 +35,14 @@ public class SurveyController {
     @Autowired
     private UserRepository userRepository;
 
-    @PostMapping("/")
+    @PostMapping("/createSurvey")
     @PreAuthorize("hasAuthority('OP_CREATE_SURVEY')")
     public ResponseEntity<Survey> createSurvey(@RequestBody SurveyCreationRequestDTO surveyDTO, Authentication authentication) {
         Survey survey = new Survey();
-        survey.setTitle(surveyDTO.getTitle());
-        survey.setDescription(surveyDTO.getDescription());
+        survey.setTitle(surveyDTO.getTitle() != null ? surveyDTO.getTitle() : "Untitled Survey");
+
+        survey.setDescription(surveyDTO.getDescription()!= null ? surveyDTO.getDescription() : "No description provided");
+
         survey.setSurveyMode(surveyDTO.getSurveyMode());
         survey.setDataClassification(surveyDTO.getDataClassification());
         survey.setStatus(surveyDTO.getStatus());
@@ -56,6 +60,7 @@ public class SurveyController {
         User user = userRepository.findByUsername(currentPrincipalName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found for token"));
         survey.setOwner(user);
+        logger.info(user.getUsername());
         Survey savedSurvey = surveyRepository.save(survey);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedSurvey);
     }
@@ -71,10 +76,17 @@ public class SurveyController {
     }
 
     @GetMapping("/{surveyId}")
-    @PreAuthorize("(hasAuthority('OP_VIEW_OWN_SURVEY') and @surveySecurityService.isOwnerOrSharedUser(authentication, #id)) or hasAuthority('OP_VIEW_ALL_SURVEYS')")
+    @PreAuthorize("hasAuthority('OP_VIEW_OWN_SURVEY') and hasAuthority('OP_VIEW_ALL_SURVEYS')")
     public ResponseEntity<Survey> getSurveyById(@PathVariable Long surveyId) {
         String userId = getCurrentUserId();
         Optional<Survey> surveyOptional = surveyService.getSurveyByIdAndUsername(surveyId, userId);
+        logger.info("Fetching survey with ID: " + surveyId + " for user: " + userId);
+        if (surveyOptional.isEmpty()) {
+            logger.warn("Survey with ID: " + surveyId + " not found for user: " + userId);
+        } else {
+            logger.info("Found survey: " + surveyOptional.get().getTitle() + " for user: " + userId);
+        }
+
         return surveyOptional
                 .map(survey -> new ResponseEntity<>(survey, HttpStatus.OK))
                 .orElseGet(() -> ResponseEntity.notFound().build());
