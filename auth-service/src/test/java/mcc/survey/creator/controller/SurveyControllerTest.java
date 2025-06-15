@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import mcc.survey.creator.dto.SurveyCreationRequestDTO;
+import mcc.survey.creator.dto.SurveyDTO;
 import mcc.survey.creator.model.Survey;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.SurveyRepository;
@@ -76,7 +77,7 @@ public class SurveyControllerTest {
         when(surveyRepository.save(any(Survey.class))).thenReturn(expectedSavedSurvey);
 
         // Act
-        ResponseEntity<Survey> response = surveyController.createSurvey(dto, authentication);
+        ResponseEntity<SurveyDTO> response = surveyController.createSurvey(dto, authentication);
 
         // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());

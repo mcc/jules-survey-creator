@@ -1,4 +1,4 @@
-// package mcc.survey.creator.controller;
+package mcc.survey.creator.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mcc.survey.creator.dto.SurveyCreationRequestDTO;
