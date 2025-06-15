@@ -18,7 +18,7 @@ const LoginScreen = () => {
       // navigate('/dashboard'); // Redirect to dashboard on successful login - This might be handled by AuthContext or App.jsx now
                                 // Let's assume successful login updates context and App.jsx handles navigation
     } catch (err) {
-      const errorMessage = (err.response && err.response.data && err.response.data.message) || err.message || 'Login failed. Please try again.';
+      const errorMessage = (err.response && err.response.data && (err.response.data.message || err.response.data.detail)) || err.message || 'Login failed. Please try again.';
       setError(errorMessage); // Set error message first
 
       if (errorMessage.includes('password has expired')) { // Check for specific error message
