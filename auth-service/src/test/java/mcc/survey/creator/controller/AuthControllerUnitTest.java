@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import mcc.survey.creator.dto.ForgotPasswordRequestDto;
 import mcc.survey.creator.dto.ResetPasswordRequestDto;
 import mcc.survey.creator.service.UserService;
-import mcc.survey.creator.util.ResourceNotFoundException;
+import mcc.survey.creator.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

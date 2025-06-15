@@ -15,18 +15,17 @@ const LoginScreen = () => {
     setError(''); // Clear previous errors
     try {
       await login(username, password);
-      // navigate('/dashboard'); // Redirect to dashboard on successful login - This might be handled by AuthContext or App.jsx now
-                                // Let's assume successful login updates context and App.jsx handles navigation
-    } catch (err) {
-      const errorMessage = (err.response && err.response.data && (err.response.data.message || err.response.data.detail)) || err.message || 'Login failed. Please try again.';
-      setError(errorMessage); // Set error message first
+    } catch (error) { // Renamed err to error for clarity
+      console.error('Login failed:', error); // Keep for debugging
+      // error.message should now contain the message from ErrorResponseDto or the standardized interceptor message
+      const displayMessage = error.message || 'Login failed. An unexpected error occurred.';
+      setError(displayMessage);
 
-      if (errorMessage.includes('password has expired')) { // Check for specific error message
+      if (displayMessage.includes('password has expired')) { // Check for specific error message
           // Optionally, keep the error message like "Your password has expired. Please change it."
           // setError('Your password has expired. Please change it.'); // Or append to existing
           navigate('/change-password'); // Redirect to change password page
       }
-      console.error('Login failed:', err);
     }
   };
 

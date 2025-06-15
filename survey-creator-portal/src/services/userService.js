@@ -43,10 +43,9 @@ export const changeCurrentUserPassword = (passwordData) => {
   return apiClient.post('/auth/users/change-password', passwordData)
     .then(response => response.data) // Or handle the full response if needed
     .catch(error => {
-      // It's often better to let the calling component handle UI errors,
-      // but re-throwing or transforming the error can be useful.
-      console.error('Error changing password:', error.response?.data || error.message);
-      throw error.response?.data || error; // Re-throw for the component to catch
+      // The error object is already transformed by the apiClient interceptor.
+      // Optional: console.error('Error changing password in userService:', error);
+      throw error;
     });
 };
 
@@ -54,8 +53,9 @@ export const requestPasswordReset = (email) => {
   return apiClient.post('/auth/forgot-password', { email })
     .then(response => response.data)
     .catch(error => {
-      console.error('Error requesting password reset:', error.response?.data || error.message);
-      throw error.response?.data || error;
+      // The error object is already transformed by the apiClient interceptor.
+      // Optional: console.error('Error requesting password reset in userService:', error);
+      throw error;
     });
 };
 
@@ -63,7 +63,8 @@ export const confirmPasswordReset = (token, newPassword) => {
   return apiClient.post('/auth/reset-password', { token, newPassword })
     .then(response => response.data)
     .catch(error => {
-      console.error('Error confirming password reset:', error.response?.data || error.message);
-      throw error.response?.data || error;
+      // The error object is already transformed by the apiClient interceptor.
+      // Optional: console.error('Error confirming password reset in userService:', error);
+      throw error;
     });
 };
