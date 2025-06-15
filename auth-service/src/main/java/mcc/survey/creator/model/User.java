@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+// import javax.persistence.OneToMany; // Replaced by jakarta
+// import javax.persistence.CascadeType; // Replaced by jakarta
+import mcc.survey.creator.model.SurveyShare; // Added for SurveyShare relationship
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -50,9 +53,8 @@ public class User {
     @JsonManagedReference
     private List<Survey> surveys;
 
-    @ManyToMany(mappedBy = "sharedWithUsers", fetch = FetchType.LAZY)
-    @JsonManagedReference
-    private Set<Survey> sharedSurveys = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<SurveyShare> sharedSurveys;
 
     @Column(nullable = false)
     private boolean isActive = true;

@@ -15,6 +15,9 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+// import javax.persistence.OneToMany; // Replaced by jakarta
+// import javax.persistence.CascadeType; // Replaced by jakarta
+import mcc.survey.creator.model.SurveyShare; // Added for SurveyShare relationship
 
 @Entity
 @Data
@@ -62,14 +65,8 @@ public class Survey {
     @Lob
     private String surveyJson; // Store SurveyJS JSON definition
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "survey_shared_users",
-            joinColumns = @JoinColumn(name = "survey_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    @JsonBackReference
-    private Set<User> sharedWithUsers = new HashSet<>();
+    @OneToMany(mappedBy = "survey", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<SurveyShare> sharedWithUsers;
 
     public Survey() {
     }
