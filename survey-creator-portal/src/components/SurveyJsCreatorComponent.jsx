@@ -60,7 +60,7 @@ function SurveyJsCreatorComponent({ json, options, onGetSurvey, onCreateSurvey, 
                     // Ownership check using username:
                     // Assumes backend will provide ownerUsername in fetchedSurvey.
                     // Logged-in user's username is in user.sub (from JWT's subject claim).
-                    if (fetchedSurvey.ownerUsername !== user.sub) { // ***** USER OWNERSHIP CHECK *****
+                    if (!fetchedSurvey.owner || fetchedSurvey.owner.username !== user.sub) { // ***** USER OWNERSHIP CHECK *****
                         alert("Error: You are not authorized to edit this survey, or the survey does not exist, or owner information is missing.");
                         // Reset to new survey state
                         if (creator) {
@@ -123,28 +123,36 @@ function SurveyJsCreatorComponent({ json, options, onGetSurvey, onCreateSurvey, 
         }
     }, [surveyId, onFetchSharedUsers]); // Depends on surveyId and onFetchSharedUsers
     creator.saveSurveyFunc = (saveNo, callback) => {
-        const surveyJsonToSave = creator.JSON; // surveyJson is the SurveyJS definition
-        console.log("Attempting to save survey JSON:", surveyJsonToSave);
+        // Inside creator.saveSurveyFunc
+        const currentSurveyJsonAsObject = creator.JSON;
+        console.log("Attempting to save survey JSON (object):", currentSurveyJsonAsObject);
 
         const surveyData = {
-            surveyJson: surveyJsonToSave,
-            surveyMode: surveyMode,
-            dataClassification: dataClassification,
-            status: status
+            title: currentSurveyJsonAsObject.title || (currentSurveyJsonAsObject.pages && currentSurveyJsonAsObject.pages[0] && currentSurveyJsonAsObject.pages[0].title) || 'Untitled Survey', // Extract title
+            description: currentSurveyJsonAsObject.description || (currentSurveyJsonAsObject.pages && currentSurveyJsonAsObject.pages[0] && currentSurveyJsonAsObject.pages[0].description) || '', // Extract description
+            surveyJson: JSON.stringify(currentSurveyJsonAsObject), // Stringify the SurveyJS JSON object
+            surveyMode: surveyMode, // from local state
+            dataClassification: dataClassification, // from local state
+            status: status // from local state
         };
 
+        // The rest of the logic (calling onUpdateSurvey or onCreateSurvey) remains the same,
+        // but now 'surveyData' has a stringified 'surveyJson' and includes title/description.
         if (surveyId) {
             if (onUpdateSurvey) {
-                onUpdateSurvey(surveyId, surveyData)
+                onUpdateSurvey(surveyId, surveyData) // surveyData now contains stringified surveyJson
                     .then(savedSurvey => {
-                        console.log("Survey updated successfully:", savedSurvey);
+                        // ... (existing success logic)
+                        // Update local state from savedSurvey, which is SurveyDTO
                         setSurveyId(savedSurvey.id);
                         setSurveyMode(savedSurvey.surveyMode);
                         setDataClassification(savedSurvey.dataClassification);
                         setStatus(savedSurvey.status);
-                        // creator.JSON = savedSurvey.surveyJson; // Optional: if backend returns modified JSON
+                        // Optionally reload creator.JSON if backend could modify it, e.g.
+                        if (savedSurvey.surveyJson) creator.JSON = JSON.parse(savedSurvey.surveyJson);
                         callback(saveNo, true);
                     })
+                    // ... (existing error logic)
                     .catch(error => {
                         console.error("Error during survey update operation:", error);
                         callback(saveNo, false);
@@ -155,16 +163,18 @@ function SurveyJsCreatorComponent({ json, options, onGetSurvey, onCreateSurvey, 
             }
         } else {
             if (onCreateSurvey) {
-                onCreateSurvey(surveyData)
+                onCreateSurvey(surveyData) // surveyData now contains stringified surveyJson
                     .then(savedSurvey => {
-                        console.log("Survey created successfully:", savedSurvey);
-                        setSurveyId(savedSurvey.id);
-                        setSurveyMode(savedSurvey.surveyMode);
-                        setDataClassification(savedSurvey.dataClassification);
-                        setStatus(savedSurvey.status);
-                        // creator.JSON = savedSurvey.surveyJson; // Optional: if backend returns modified JSON
-                        callback(saveNo, true);
+                        // ... (existing success logic)
+                         setSurveyId(savedSurvey.id);
+                         setSurveyMode(savedSurvey.surveyMode);
+                         setDataClassification(savedSurvey.dataClassification);
+                         setStatus(savedSurvey.status);
+                        // Optionally reload creator.JSON, e.g.
+                        if (savedSurvey.surveyJson) creator.JSON = JSON.parse(savedSurvey.surveyJson);
+                         callback(saveNo, true);
                     })
+                    // ... (existing error logic)
                     .catch(error => {
                         console.error("Error during survey create operation:", error);
                         callback(saveNo, false);
