@@ -122,6 +122,8 @@ const SurveyCreator = ({ surveyIdFromParent = null }) => {
   const [surveyQuestions, setSurveyQuestions] = useState([]);
   const [surveyId, setSurveyId] = useState(surveyIdFromParent);
   const [surveyStatus, setSurveyStatus] = useState('draft');
+  const [surveyMode, setSurveyMode] = useState('access_code'); // Default or load from survey
+  const [dataClassification, setDataClassification] = useState('restricted'); // Default or load
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [jsonViewOpen, setJsonViewOpen] = useState(false);
@@ -137,6 +139,8 @@ const SurveyCreator = ({ surveyIdFromParent = null }) => {
         setSurveyDescription('');
         setSurveyQuestions([{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]);
         setSurveyStatus('draft');
+        setSurveyMode('access_code');
+        setDataClassification('restricted');
         setSurveyId(null);
         setInitialLoadDone(true);
         return;
@@ -145,16 +149,47 @@ const SurveyCreator = ({ surveyIdFromParent = null }) => {
       try {
         console.log(`Loading survey with ID: ${id_to_load}`);
         const survey = await getSurvey(id_to_load);
+        // Inside useEffect, after successfully fetching 'survey'
         setSurveyId(survey.id);
-        setSurveyTitle(survey.title);
-        setSurveyDescription(survey.description);
-        setSurveyQuestions(survey.questions.map(q => ({
-            id: q.id || `new-${Date.now()}-${Math.random()}`,
-            text: q.text || '',
-            type: q.type || 'text',
-            options: q.options || (q.type === 'multiple-choice' ? ['Option 1'] : [])
-        })));
-        setSurveyStatus(survey.status);
+        setSurveyTitle(survey.title || ''); // Use title from DTO
+        setSurveyDescription(survey.description || ''); // Use description from DTO
+        setSurveyStatus(survey.status || 'draft');
+        setSurveyMode(survey.surveyMode || 'access_code'); // New
+        setDataClassification(survey.dataClassification || 'restricted'); // New
+
+        if (survey.surveyJson) {
+            try {
+                const surveyJsonParsed = JSON.parse(survey.surveyJson);
+                // Attempt to extract questions based on a common SurveyJS structure
+                // This part is highly dependent on the actual structure of survey.surveyJson
+                let loadedQuestions = [];
+                if (surveyJsonParsed.questions) { // If direct "questions" array
+                    loadedQuestions = surveyJsonParsed.questions;
+                } else if (surveyJsonParsed.pages && surveyJsonParsed.pages.length > 0 && surveyJsonParsed.pages[0].elements) { // SurveyJS structure
+                    loadedQuestions = surveyJsonParsed.pages[0].elements.map(q => ({
+                        id: q.name || `loaded-${Date.now()}-${Math.random()}`, // SurveyJS uses 'name' for question identifier
+                        text: q.title || q.name || '', // SurveyJS uses 'title' for question text
+                        type: q.type || 'text',
+                        // Map other properties like choices for multiple-choice if needed
+                        options: q.choices ? q.choices.map(c => typeof c === 'string' ? c : c.value) : []
+                    }));
+                }
+                // Fallback if parsing structure isn't as expected, or if surveyJson is empty/malformed
+                setSurveyQuestions(loadedQuestions.length > 0 ? loadedQuestions.map(q => ({
+                    id: q.id || `loaded-${Date.now()}-${Math.random()}`,
+                    text: q.text || '',
+                    type: q.type || 'text',
+                    options: q.options || (q.type === 'multiple-choice' ? ['Option 1'] : [])
+                })) : [{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]);
+            } catch (parseError) {
+                console.error("Failed to parse surveyJson:", parseError);
+                // Fallback to a default question structure if parsing fails
+                setSurveyQuestions([{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]);
+            }
+        } else {
+            // If no surveyJson, initialize with a default new question
+            setSurveyQuestions([{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]);
+        }
       } catch (error) {
         console.error("Failed to load survey:", error);
         setSurveyId(null); // Reset ID if survey not found or error
@@ -162,6 +197,8 @@ const SurveyCreator = ({ surveyIdFromParent = null }) => {
         setSurveyDescription('');
         setSurveyQuestions([{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]);
         setSurveyStatus('draft');
+        setSurveyMode('access_code');
+        setDataClassification('restricted');
       } finally {
         setLoading(false);
         setInitialLoadDone(true);
@@ -209,41 +246,91 @@ const SurveyCreator = ({ surveyIdFromParent = null }) => {
   const handleSaveSurvey = async (statusToSet) => {
     setLoading(true);
     const finalStatus = statusToSet || surveyStatus;
-    const questionsForApi = surveyQuestions.map(q => ({
-        id: String(q.id).startsWith('new-') ? undefined : q.id,
-        text: q.text,
-        type: q.type,
-        options: q.options && q.options.length > 0 ? q.options.filter(opt => opt.trim() !== '') : undefined,
-    }));
 
-    const surveyData = {
-      title: surveyTitle,
-      description: surveyDescription,
-      questions: questionsForApi,
-      status: finalStatus,
-      userId: 'user1' // Mock user ID, replace with actual user ID from context/auth
+    // Construct surveyJsonString
+    const surveyJsQuestions = surveyQuestions.map(q => ({
+        type: q.type,
+        name: q.id, // Use local id as SurveyJS question name
+        title: q.text,
+        choices: q.type === 'multiple-choice' && q.options ? q.options.map(opt => String(opt).trim()).filter(opt => opt) : undefined,
+        // Add other SurveyJS properties as needed based on question type
+    })).filter(q => q.title); // Ensure question has text/title
+
+    const surveyJsonToSave = {
+        title: surveyTitle, // Include title from state
+        description: surveyDescription, // Include description from state
+        // Standard SurveyJS structure:
+        pages: [{
+            name: "page1",
+            elements: surveyJsQuestions
+        }]
+        // You might also want to store status, surveyMode, dataClassification within surveyJson if your model expects it
     };
+    const surveyJsonString = JSON.stringify(surveyJsonToSave);
 
     try {
       let savedSurvey;
       if (surveyId && !String(surveyId).startsWith("new-")) {
-        savedSurvey = await updateSurvey(surveyId, { ...surveyData, id: surveyId });
+        const surveyDataForUpdate = {
+          id: surveyId,
+          title: surveyTitle,
+          description: surveyDescription,
+          surveyJson: surveyJsonString, // Use the stringified JSON
+          status: finalStatus,
+          surveyMode: surveyMode, // From state
+          dataClassification: dataClassification, // From state
+        };
+        savedSurvey = await updateSurvey(surveyId, surveyDataForUpdate);
         console.log('Survey updated:', savedSurvey);
       } else {
-        savedSurvey = await createSurvey(surveyData);
+        const surveyDataForCreate = {
+          title: surveyTitle,
+          description: surveyDescription,
+          surveyJson: surveyJsonString, // Use the stringified JSON
+          status: finalStatus,
+          surveyMode: surveyMode, // From state
+          dataClassification: dataClassification, // From state
+        };
+        savedSurvey = await createSurvey(surveyDataForCreate);
         console.log('Survey created:', savedSurvey);
-        setSurveyId(savedSurvey.id); // Update state with new ID from backend
       }
-      // Update state with potentially modified data from backend (e.g. confirmed ID, status)
-      setSurveyTitle(savedSurvey.title);
-      setSurveyDescription(savedSurvey.description);
-      setSurveyStatus(savedSurvey.status);
-      setSurveyQuestions(savedSurvey.questions.map(q => ({ // Re-map questions from response
-            id: q.id,
-            text: q.text,
-            type: q.type,
-            options: q.options || (q.type === 'multiple-choice' ? [] : [])
-      })));
+
+      // Update state with potentially modified data from backend
+      setSurveyId(savedSurvey.id);
+      setSurveyTitle(savedSurvey.title || '');
+      setSurveyDescription(savedSurvey.description || '');
+      setSurveyStatus(savedSurvey.status || 'draft');
+      setSurveyMode(savedSurvey.surveyMode || 'access_code'); // Update from response
+      setDataClassification(savedSurvey.dataClassification || 'restricted'); // Update from response
+
+      if (savedSurvey.surveyJson) {
+          try {
+              const surveyJsonParsed = JSON.parse(savedSurvey.surveyJson);
+              // Similar parsing logic as in useEffect
+              let loadedQuestions = [];
+              if (surveyJsonParsed.questions) {
+                  loadedQuestions = surveyJsonParsed.questions;
+              } else if (surveyJsonParsed.pages && surveyJsonParsed.pages.length > 0 && surveyJsonParsed.pages[0].elements) {
+                   loadedQuestions = surveyJsonParsed.pages[0].elements.map(q => ({
+                      id: q.name || `loaded-${Date.now()}-${Math.random()}`,
+                      text: q.title || q.name || '',
+                      type: q.type || 'text',
+                      options: q.choices ? q.choices.map(c => typeof c === 'string' ? c : c.value) : []
+                  }));
+              }
+              setSurveyQuestions(loadedQuestions.length > 0 ? loadedQuestions.map(q => ({
+                  id: q.id || `loaded-${Date.now()}-${Math.random()}`, // ensure id exists
+                  text: q.text || '',
+                  type: q.type || 'text',
+                  options: q.options || (q.type === 'multiple-choice' ? [] : [])
+              })) : [{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]);
+          } catch (parseError) {
+              console.error("Failed to parse surveyJson from save response:", parseError);
+              setSurveyQuestions([{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]); // Fallback
+          }
+      } else {
+          setSurveyQuestions([{ id: `new-${Date.now()}`, text: 'New Question', type: 'text', options: [] }]); // Fallback
+      }
       // alert(`Survey ${surveyId ? 'updated' : 'created'} successfully! Status: ${savedSurvey.status}`);
     } catch (error) {
       console.error('Failed to save survey:', error);
@@ -338,7 +425,17 @@ const SurveyCreator = ({ surveyIdFromParent = null }) => {
           <DialogTitle>Survey JSON</DialogTitle>
           <DialogContent>
             <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '60vh', overflowY: 'auto' }}>
-              {JSON.stringify({ id: surveyId, title: surveyTitle, description: surveyDescription, questions: surveyQuestions, status: surveyStatus }, null, 2)}
+              {JSON.stringify({
+                id: surveyId,
+                title: surveyTitle,
+                description: surveyDescription,
+                surveyMode: surveyMode, // Added for viewing
+                dataClassification: dataClassification, // Added for viewing
+                status: surveyStatus,
+                // The surveyJson string itself, or the parsed questions array for easier viewing of structure
+                // surveyJson: surveyJsonString, // If you want to see the raw stringified JSON
+                questions: surveyQuestions // To see the current state of questions array
+              }, null, 2)}
             </pre>
           </DialogContent>
           <DialogActions>
