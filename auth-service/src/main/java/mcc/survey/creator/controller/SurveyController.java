@@ -83,21 +83,15 @@ public class SurveyController {
 
     @PostMapping("/createSurvey")
     @PreAuthorize("hasAuthority('OP_CREATE_SURVEY')")
-    public ResponseEntity<SurveyDTO> createSurvey(@Valid @RequestBody SurveyCreationRequestDTO surveyDTO, Authentication authentication) {
+    public ResponseEntity<SurveyDTO> createSurvey(@Valid @RequestBody SurveyDTO surveyDTO, Authentication authentication) {
         Survey survey = new Survey();
         survey.setTitle(surveyDTO.getTitle() != null ? surveyDTO.getTitle() : "Untitled Survey");
         survey.setDescription(surveyDTO.getDescription()!= null ? surveyDTO.getDescription() : "No description provided");
         survey.setSurveyMode(surveyDTO.getSurveyMode());
         survey.setDataClassification(surveyDTO.getDataClassification());
         survey.setStatus(surveyDTO.getStatus());
-
-        ObjectMapper objectMapper = new ObjectMapper(); // Consider making this a bean
-        try {
-            survey.setSurveyJson(objectMapper.writeValueAsString(surveyDTO.getSurveyJson()));
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            logger.error("Error processing surveyJson for survey creation, title: '{}'", surveyDTO.getTitle(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null); // Consider a proper error DTO
-        }
+        // surveyJson is now directly a String in SurveyDTO, so no conversion is needed.
+        survey.setSurveyJson(surveyDTO.getSurveyJson());
 
         String currentPrincipalName = authentication.getName();
         User user = userRepository.findByUsername(currentPrincipalName)
