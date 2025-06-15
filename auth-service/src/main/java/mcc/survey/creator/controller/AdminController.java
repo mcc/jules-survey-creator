@@ -20,6 +20,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors; // Added for role mapping
+import mcc.survey.creator.dto.UserDTO; // Added UserDTO import
 
 @RestController
 @RequestMapping("/api/admin") // Changed base path for admin functionalities
@@ -29,6 +31,27 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+
+    // Helper method to convert User entity to UserDTO
+    private UserDTO convertToUserDTO(User user) {
+        if (user == null) {
+            return null;
+        }
+        Set<String> roleNames = user.getRoles().stream()
+                                     .map(Role::getName) // Assumes Role entity has getName()
+                                     .collect(Collectors.toSet());
+        return new UserDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRank(),
+                user.getPost(),
+                user.getEnglishName(),
+                user.getChineseName(),
+                roleNames,
+                user.isActive()
+        );
+    }
 
     @PostConstruct
     private void init() {
@@ -49,25 +72,25 @@ public class AdminController {
         // will be caught by GlobalExceptionHandler if they are of types like DuplicateResourceException or IllegalArgumentException.
         // Assuming userService.createUser throws appropriate exceptions.
         User newUser = userService.createUser(createUserRequest);
-        // Consider returning a UserResponse DTO instead of the User entity for security/consistency
-        return ResponseEntity.ok(newUser);
+        return ResponseEntity.ok(convertToUserDTO(newUser));
     }
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
-    public ResponseEntity<List<User>> getAllUsers() {
-        // Consider returning List<UserResponse>
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
         List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+        List<UserDTO> userDTOs = users.stream()
+                                      .map(this::convertToUserDTO)
+                                      .collect(Collectors.toList());
+        return ResponseEntity.ok(userDTOs);
     }
 
     @GetMapping("/users/{userId}")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
-    public ResponseEntity<?> getUserById(@PathVariable Long userId) {
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
         User user = userService.getUserById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
-        // Consider mapping to UserResponse
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(convertToUserDTO(user));
     }
 
     @PutMapping("/users/{userId}")
@@ -76,10 +99,9 @@ public class AdminController {
         // RuntimeExceptions from service (like "Username already taken", "Email already in use", "Role not found")
         // will be caught by GlobalExceptionHandler if they are of types like DuplicateResourceException or IllegalArgumentException.
         // Assuming userService.editUser throws appropriate exceptions for not found or other issues.
-        User updatedUser = userService.editUser(userId, editUserRequest)
+        User updatedUserEntity = userService.editUser(userId, editUserRequest)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId + " for update."));
-        // Consider mapping to UserResponse
-        return ResponseEntity.ok(updatedUser);
+        return ResponseEntity.ok(convertToUserDTO(updatedUserEntity));
     }
 
     // Changed endpoint from /users/{username}/reset-password to /users/reset-password

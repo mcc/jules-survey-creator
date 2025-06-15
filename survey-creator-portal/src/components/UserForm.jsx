@@ -14,6 +14,11 @@ const UserForm = () => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    password: '', // Added for user creation
+    rank: '',
+    post: '',
+    englishName: '',
+    chineseName: '',
     roles: [], // Initialized as an empty array for multi-select
     isActive: true,
   });
@@ -55,6 +60,11 @@ const UserForm = () => {
           setFormData({
             username: userData.username,
             email: userData.email,
+            password: '', // Not fetching password for edit
+            rank: userData.rank || '',
+            post: userData.post || '',
+            englishName: userData.englishName || '',
+            chineseName: userData.chineseName || '',
             // Ensure roles is an array of strings
             roles: userData.roles.map(role => typeof role === 'string' ? role : (role.name || role.role)).filter(Boolean),
             isActive: userData.isActive,
@@ -109,16 +119,25 @@ const UserForm = () => {
     const payload = {
       username: formData.username,
       email: formData.email,
+      rank: formData.rank,
+      post: formData.post,
+      englishName: formData.englishName,
+      chineseName: formData.chineseName,
       roles: formData.roles, // formData.roles is already an array of strings
     };
 
     if (isEditMode) {
       payload.isActive = formData.isActive;
     } else {
-      // For create mode, if roles are empty, backend service defaults to ROLE_USER
-      // If specific default behavior is needed from frontend (e.g. always send ROLE_USER if empty),
-      // it can be handled here. For now, rely on backend logic.
-      // payload.isActive is not sent for create, backend defaults it to true.
+      // For create mode, password is required
+      if (!formData.password) {
+        setError("Password is required for creating a new user.");
+        setLoading(false);
+        return;
+      }
+      payload.password = formData.password;
+      // isActive is not sent for create, backend defaults it to true.
+      // roles default to ROLE_USER if empty by backend service
     }
 
     try {
@@ -190,6 +209,61 @@ const UserForm = () => {
           autoComplete="email"
           type="email"
           value={formData.email}
+          onChange={handleChange}
+          disabled={loading}
+        />
+        {!isEditMode && (
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type="password"
+            id="password"
+            autoComplete="new-password"
+            value={formData.password}
+            onChange={handleChange}
+            disabled={loading}
+          />
+        )}
+        <TextField
+          margin="normal"
+          fullWidth
+          id="rank"
+          label="Rank"
+          name="rank"
+          value={formData.rank}
+          onChange={handleChange}
+          disabled={loading}
+        />
+        <TextField
+          margin="normal"
+          fullWidth
+          id="post"
+          label="Post"
+          name="post"
+          value={formData.post}
+          onChange={handleChange}
+          disabled={loading}
+        />
+        <TextField
+          margin="normal"
+          fullWidth
+          id="englishName"
+          label="English Name"
+          name="englishName"
+          value={formData.englishName}
+          onChange={handleChange}
+          disabled={loading}
+        />
+        <TextField
+          margin="normal"
+          fullWidth
+          id="chineseName"
+          label="Chinese Name"
+          name="chineseName"
+          value={formData.chineseName}
           onChange={handleChange}
           disabled={loading}
         />

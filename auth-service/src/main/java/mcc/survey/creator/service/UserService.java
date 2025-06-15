@@ -69,11 +69,22 @@ public class UserService {
 
         User user = new User();
         user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail()); // Uncomment if User model has email
+        user.setEmail(request.getEmail()); // User model has email
 
-        String randomPassword = generateRandomPassword();
-        user.setPassword(passwordEncoder.encode(randomPassword));
+        // Use password from request and encode it
+        if (request.getPassword() == null || request.getPassword().isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+        PasswordPolicyValidator.validate(request.getPassword()); // Validate password policy
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
         user.setActive(true); // Default to active
+
+        // Map new fields
+        user.setRank(request.getRank());
+        user.setPost(request.getPost());
+        user.setEnglishName(request.getEnglishName());
+        user.setChineseName(request.getChineseName());
 
         Set<Role> roles = new HashSet<>();
         if (request.getRoles() != null) {
@@ -96,9 +107,8 @@ public class UserService {
         user.setPasswordExpirationDate(LocalDate.now().plusDays(90));
 
         User savedUser = userRepository.save(user);
-        log.info("Created new user: {}. Generated password: {}", savedUser.getUsername(), randomPassword);
-        // It's generally not a good practice to return the generated password, even in logs for long term.
-        // Consider sending it via a secure channel or having user set it on first login.
+        log.info("Created new user: {}", savedUser.getUsername());
+        // Password is not logged.
         return savedUser;
     }
 
@@ -118,6 +128,21 @@ public class UserService {
                 }
                 user.setEmail(request.getEmail());
             }
+
+            // Update new fields if provided
+            if (request.getRank() != null) {
+                user.setRank(request.getRank());
+            }
+            if (request.getPost() != null) {
+                user.setPost(request.getPost());
+            }
+            if (request.getEnglishName() != null) {
+                user.setEnglishName(request.getEnglishName());
+            }
+            if (request.getChineseName() != null) {
+                user.setChineseName(request.getChineseName());
+            }
+
             if (request.getIsActive() != null) {
                 user.setActive(request.getIsActive());
             }
