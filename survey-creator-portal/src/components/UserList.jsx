@@ -117,6 +117,8 @@ const UserList = () => {
               <TableCell>ID</TableCell>
               <TableCell>Username</TableCell>
               <TableCell>Email</TableCell>
+              <TableCell>Rank</TableCell>
+              <TableCell>Post</TableCell>
               <TableCell>Active</TableCell>
               <TableCell>Roles</TableCell>
               <TableCell>Actions</TableCell>
@@ -129,6 +131,8 @@ const UserList = () => {
                   <TableCell>{user.id}</TableCell>
                   <TableCell>{user.username}</TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.rank}</TableCell>
+                  <TableCell>{user.post}</TableCell>
                   <TableCell>{user.isActive ? 'Yes' : 'No'}</TableCell>
                   <TableCell>{user.roles.map(role => role.name || role).join(', ')}</TableCell>
                   <TableCell>
@@ -162,7 +166,7 @@ const UserList = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} align="center"> {/* Adjusted colSpan to 6 */}
+                <TableCell colSpan={8} align="center"> {/* Adjusted colSpan to 8 */}
                   No users found.
                 </TableCell>
               </TableRow>

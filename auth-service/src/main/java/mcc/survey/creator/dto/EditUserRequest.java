@@ -5,6 +5,10 @@ import java.util.Set;
 public class EditUserRequest {
     private String username;
     private String email;
+    private String rank;
+    private String post;
+    private String englishName;
+    private String chineseName;
     private Set<String> roles;
     private Boolean isActive; // Use Boolean to allow for optional updates
 
@@ -39,5 +43,37 @@ public class EditUserRequest {
 
     public void setIsActive(Boolean active) {
         isActive = active;
+    }
+
+    public String getRank() {
+        return rank;
+    }
+
+    public void setRank(String rank) {
+        this.rank = rank;
+    }
+
+    public String getPost() {
+        return post;
+    }
+
+    public void setPost(String post) {
+        this.post = post;
+    }
+
+    public String getEnglishName() {
+        return englishName;
+    }
+
+    public void setEnglishName(String englishName) {
+        this.englishName = englishName;
+    }
+
+    public String getChineseName() {
+        return chineseName;
+    }
+
+    public void setChineseName(String chineseName) {
+        this.chineseName = chineseName;
     }
 }

@@ -16,8 +16,18 @@ export const editUser = (userId, userData) => {
   return apiClient.put(`/admin/users/${userId}`, userData).then(response => response.data);
 };
 
-export const resetPassword = (username) => {
-  return apiClient.post(`/admin/users/${username}/reset-password`).then(response => response.data);
+// Updated to match backend AdminController: POST /api/admin/users/reset-password
+// which expects { username: "user", newPassword: "newPassword" } in the body.
+// However, this frontend function was likely intended for an admin to trigger a reset,
+// not necessarily to set a new password directly.
+// The backend AdminController's resetPassword(AdminResetPasswordRequest)
+// implies the admin provides the new password.
+// If the intent was just to "trigger a reset" without setting a new password,
+// that would be different from what backend AdminController /users/reset-password does.
+// For now, assuming the admin *does* provide the new password as per backend.
+export const resetPassword = (username, newPassword) => {
+  return apiClient.post('/admin/users/reset-password', { username, newPassword })
+    .then(response => response.data);
 };
 
 export const setUserStatus = (userId, isActive) => {

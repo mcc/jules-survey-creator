@@ -54,7 +54,20 @@ public class SurveyController {
         if (user == null) {
             return null;
         }
-        return new UserDTO(user.getId(), user.getUsername());
+        Set<String> roleNames = user.getRoles().stream()
+                                     .map(role -> role.getName()) // Assuming Role entity has getName()
+                                     .collect(Collectors.toSet());
+        return new UserDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRank(),
+                user.getPost(),
+                user.getEnglishName(),
+                user.getChineseName(),
+                roleNames,
+                user.isActive()
+        );
     }
 
     private SurveyDTO convertToSurveyDTO(Survey survey) {

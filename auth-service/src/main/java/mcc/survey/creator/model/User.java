@@ -61,6 +61,11 @@ public class User {
     private String resetPasswordToken;
     private LocalDateTime resetPasswordTokenExpiry;
 
+    private String rank;
+    private String post;
+    private String englishName;
+    private String chineseName;
+
     // Getters and setters
     public Long getId() {
         return id;
