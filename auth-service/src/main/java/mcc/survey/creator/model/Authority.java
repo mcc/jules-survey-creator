@@ -3,12 +3,15 @@ package mcc.survey.creator.model;
 import jakarta.persistence.*;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+
 @Entity
 @Table(name = "authorities")
 public class Authority {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonIdentityInfo(generator = com.fasterxml.jackson.annotation.ObjectIdGenerators.PropertyGenerator.class, property = "id")
     private Long id;
 
     @Column(unique = true, nullable = false)

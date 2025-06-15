@@ -6,6 +6,11 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashSet;
@@ -17,6 +22,7 @@ public class Survey {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
     private Long id;
 
     @NotBlank(message = "Title cannot be blank")
@@ -38,6 +44,7 @@ public class Survey {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     private User owner;
 
     @CreationTimestamp
@@ -61,6 +68,7 @@ public class Survey {
             joinColumns = @JoinColumn(name = "survey_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
+    @JsonBackReference
     private Set<User> sharedWithUsers = new HashSet<>();
 
     public Survey() {
