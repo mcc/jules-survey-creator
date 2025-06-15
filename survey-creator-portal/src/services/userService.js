@@ -59,6 +59,15 @@ export const changeCurrentUserPassword = (passwordData) => {
     });
 };
 
+export const searchUsers = (searchQuery) => {
+  return apiClient.get(`/users/search?q=${encodeURIComponent(searchQuery)}`)
+    .then(response => response.data)
+    .catch(error => {
+      console.error('Error searching users:', error);
+      throw error;
+    });
+};
+
 export const requestPasswordReset = (email) => {
   return apiClient.post('/auth/forgot-password', { email })
     .then(response => response.data)
