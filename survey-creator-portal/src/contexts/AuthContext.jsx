@@ -137,7 +137,39 @@ export const AuthProvider = ({ children }) => {
             return Promise.reject(refreshError);
           }
         }
-        return Promise.reject(error);
+        // New error parsing logic
+        if (error.response && error.response.data && typeof error.response.data.message !== 'undefined' && typeof error.response.data.status !== 'undefined') {
+          return Promise.reject({
+            message: error.response.data.message,
+            status: error.response.data.status,
+            details: error.response.data.debugMessage,
+            path: error.response.data.path,
+            timestamp: error.response.data.timestamp,
+            originalResponse: error.response
+          });
+        } else if (error.response && error.response.status) { // For errors that have a response but not our DTO structure
+          return Promise.reject({
+            message: error.response.data || 'An error occurred',
+            status: error.response.status,
+            originalResponse: error.response
+          });
+        } else if (error.request) { // For network errors where a request was made but no response received
+          return Promise.reject({
+            message: 'Network error: No response received from server.',
+            status: null,
+            originalError: error
+          });
+        } else { // For other errors
+          return Promise.reject({
+            message: error.message || 'An unexpected error occurred.',
+            status: null,
+            originalError: error
+          });
+        }
+        // The line below was effectively unreachable due to new logic always returning Promise.reject.
+        // If any case above is not met, error should still be rejected.
+        // However, to be absolutely safe and ensure an error is always rejected if it somehow bypasses above conditions:
+        // return Promise.reject(error);
       }
     );
 

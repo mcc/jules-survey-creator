@@ -3,9 +3,7 @@ package mcc.survey.creator.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import mcc.survey.creator.dto.SurveyCreationRequestDTO;
+// JsonNodeFactory and ObjectNode are no longer needed for request DTO
 import mcc.survey.creator.dto.SurveyDTO;
 import mcc.survey.creator.model.Survey;
 import mcc.survey.creator.model.User;
@@ -91,19 +89,22 @@ public class SurveyControllerTest {
         return survey;
     }
 
+    private final ObjectMapper objectMapper = new ObjectMapper(); // Keep for potential response validation or other tests
 
     @Test
     void testCreateSurvey_Success() throws Exception {
         // Arrange
-        SurveyCreationRequestDTO dto = new SurveyCreationRequestDTO();
+        SurveyDTO dto = new SurveyDTO(); // Changed from SurveyCreationRequestDTO to SurveyDTO
         dto.setTitle("Test Survey");
         dto.setDescription("Test Description");
         dto.setSurveyMode("Test Mode");
         dto.setDataClassification("Test Classification");
         dto.setStatus("Test Status");
-
         ObjectNode surveyJsonNode = createSampleJsonNode();
         dto.setSurveyJson(surveyJsonNode);
+        // surveyJson is now a String directly in SurveyDTO
+        String surveyJsonString = "{\"question\":\"What is your name?\"}";
+        dto.setSurveyJson(surveyJsonString);
 
         String username = "testuser";
         User owner = new User();
@@ -113,6 +114,9 @@ public class SurveyControllerTest {
         Survey expectedSavedSurvey = createSurveyEntity(1L, dto.getTitle(), objectMapper.writeValueAsString(surveyJsonNode), owner);
         // Populate other fields from DTO for expectedSavedSurvey
         expectedSavedSurvey.setDescription(dto.getDescription());
+        expectedSavedSurvey.setSurveyJson(surveyJsonString); // Use the string directly
+        expectedSavedSurvey.setOwner(owner);
+
         expectedSavedSurvey.setSurveyMode(dto.getSurveyMode());
         expectedSavedSurvey.setDataClassification(dto.getDataClassification());
         expectedSavedSurvey.setStatus(dto.getStatus());
@@ -138,20 +142,25 @@ public class SurveyControllerTest {
         assertEquals(surveyJsonNode, responseBody.getSurveyJson(), "SurveyJson content should match");
 
         assertEquals(expectedSavedSurvey.getOwner().getUsername(), responseBody.getOwner().getUsername());
+        assertEquals(expectedSavedSurvey.getTitle(), response.getBody().getTitle());
+        assertEquals(expectedSavedSurvey.getDescription(), response.getBody().getDescription());
+        assertEquals(expectedSavedSurvey.getSurveyJson(), response.getBody().getSurveyJson());
+        assertEquals(expectedSavedSurvey.getOwner().getUsername(), response.getBody().getOwner().getUsername());
+
 
         ArgumentCaptor<Survey> surveyArgumentCaptor = ArgumentCaptor.forClass(Survey.class);
         verify(surveyRepository).save(surveyArgumentCaptor.capture());
         Survey capturedSurvey = surveyArgumentCaptor.getValue();
 
         assertEquals(dto.getTitle(), capturedSurvey.getTitle());
-        assertEquals(objectMapper.writeValueAsString(dto.getSurveyJson()), capturedSurvey.getSurveyJson());
+        assertEquals(dto.getSurveyJson(), capturedSurvey.getSurveyJson()); // surveyJson is already a string
         assertEquals(owner, capturedSurvey.getOwner());
     }
 
     @Test
     void testCreateSurvey_UserNotFound() {
         // Arrange
-        SurveyCreationRequestDTO dto = new SurveyCreationRequestDTO();
+        SurveyDTO dto = new SurveyDTO(); // Changed from SurveyCreationRequestDTO to SurveyDTO
         dto.setTitle("Test Survey - User Not Found");
         dto.setSurveyJson(createSampleJsonNode());
 
@@ -319,5 +328,4 @@ public class SurveyControllerTest {
         assertEquals("Survey not found with id " + surveyId, exception.getMessage());
         verify(surveyRepository, never()).save(any(Survey.class));
     }
-
 }

@@ -9,7 +9,7 @@ export const getSurveysByUser = async (userId) => {
     const response = await apiClient.get('/surveys');
     return response.data;
   } catch (error) {
-    console.error('Error fetching surveys by user:', error);
+    // Optional: console.error('Error fetching surveys by user:', error);
     throw error;
   }
 };
@@ -21,11 +21,7 @@ export const fetchSharedUsers = async (surveyId) => {
     // Assuming response.data is the survey object and it contains a sharedWithUsers array
     return response.data;
   } catch (error) {
-    console.error(`Error fetching shared users for survey ID ${surveyId}:`, error);
-    // It's good to check error.response for backend-specific messages
-    if (error.response) {
-      throw new Error(error.response.data.message || `Failed to fetch shared users for survey ${surveyId}`);
-    }
+    // Optional: console.error(`Error fetching shared users for survey ID ${surveyId}:`, error);
     throw error;
   }
 };
@@ -44,14 +40,8 @@ export const shareSurvey = async (surveyId, username) => {
     const shareResponse = await apiClient.post(`/surveys/${surveyId}/share/${userIdToShare}`, {});
     return shareResponse.data;
   } catch (error) {
-    console.error(`Error sharing survey ID ${surveyId} with username ${username}:`, error);
-    // Check for specific error messages from the backend if available
-    if (error.response && error.response.data && error.response.data.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.message.includes('404')) { // Basic check for user not found from the first call
-        throw new Error(`User "${username.trim()}" not found.`);
-    }
-    throw error; // Re-throw original error if no specific message is found
+    // Optional: console.error(`Error sharing survey ID ${surveyId} with username ${username}:`, error);
+    throw error;
   }
 };
 
@@ -62,10 +52,7 @@ export const unshareSurvey = async (surveyId, userIdToUnshare) => {
     // The calling component should be prepared for this.
     return response.data;
   } catch (error) {
-    console.error(`Error unsharing survey ID ${surveyId} from user ID ${userIdToUnshare}:`, error);
-    if (error.response && error.response.data && error.response.data.message) {
-      throw new Error(error.response.data.message);
-    }
+    // Optional: console.error(`Error unsharing survey ID ${surveyId} from user ID ${userIdToUnshare}:`, error);
     throw error;
   }
 };
@@ -75,7 +62,7 @@ export const getSurvey = async (surveyId) => {
     const response = await apiClient.get(`/surveys/${surveyId}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching survey with ID ${surveyId}:`, error);
+    // Optional: console.error(`Error fetching survey with ID ${surveyId}:`, error);
     throw error;
   }
 };
@@ -85,7 +72,7 @@ export const createSurvey = async (surveyData) => {
     const response = await apiClient.post('/surveys/createSurvey', surveyData);
     return response.data;
   } catch (error) {
-    console.error('Error creating survey:', error);
+    // Optional: console.error('Error creating survey:', error);
     throw error;
   }
 };
@@ -95,7 +82,7 @@ export const updateSurvey = async (surveyId, surveyData) => {
     const response = await apiClient.put(`/surveys/${surveyId}`, surveyData);
     return response.data;
   } catch (error) {
-    console.error(`Error updating survey with ID ${surveyId}:`, error);
+    // Optional: console.error(`Error updating survey with ID ${surveyId}:`, error);
     throw error;
   }
 };
@@ -105,7 +92,7 @@ export const deleteSurvey = async (surveyId) => {
     const response = await apiClient.delete(`/surveys/${surveyId}`);
     return response.data; // Or handle 204 No Content appropriately (data might be undefined)
   } catch (error) {
-    console.error(`Error deleting survey with ID ${surveyId}:`, error);
+    // Optional: console.error(`Error deleting survey with ID ${surveyId}:`, error);
     throw error;
   }
 };
@@ -118,7 +105,7 @@ export const publishSurvey = async (surveyId) => {
     // ensure survey object structure matches what updateSurvey endpoint expects.
     return await updateSurvey(surveyId, updatedSurveyData);
   } catch (error) {
-    console.error(`Error publishing survey with ID ${surveyId}:`, error);
+    // Optional: console.error(`Error publishing survey with ID ${surveyId}:`, error);
     throw error;
   }
 };
@@ -129,7 +116,7 @@ export const unpublishSurvey = async (surveyId) => {
     const updatedSurveyData = { ...survey, status: 'draft' };
     return await updateSurvey(surveyId, updatedSurveyData);
   } catch (error) {
-    console.error(`Error unpublishing survey with ID ${surveyId}:`, error);
+    // Optional: console.error(`Error unpublishing survey with ID ${surveyId}:`, error);
     throw error;
   }
 };

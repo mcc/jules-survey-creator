@@ -91,21 +91,21 @@ public class SurveyController {
 
     @PostMapping("/createSurvey")
     @PreAuthorize("hasAuthority('OP_CREATE_SURVEY')")
-    public ResponseEntity<SurveyDTO> createSurvey(@Valid @RequestBody SurveyCreationRequestDTO surveyDTO, Authentication authentication) {
+    public ResponseEntity<SurveyDTO> createSurvey(@Valid @RequestBody SurveyDTO surveyDTO, Authentication authentication) {
         Survey survey = new Survey();
         survey.setTitle(surveyDTO.getTitle() != null ? surveyDTO.getTitle() : "Untitled Survey");
         survey.setDescription(surveyDTO.getDescription()!= null ? surveyDTO.getDescription() : "No description provided");
         survey.setSurveyMode(surveyDTO.getSurveyMode());
         survey.setDataClassification(surveyDTO.getDataClassification());
         survey.setStatus(surveyDTO.getStatus());
-
+        ObjectMapper objectMapper = new ObjectMapper();
         try {
             if (surveyDTO.getSurveyJson() != null) {
                 survey.setSurveyJson(objectMapper.writeValueAsString(surveyDTO.getSurveyJson()));
             }
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            logger.error("Error processing surveyJson for survey creation, title: '{}'", surveyDTO.getTitle(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null); // Consider a proper error DTO
+            // Let GlobalExceptionHandler handle this as a generic Exception or a specific one if defined
+            throw new RuntimeException("Error processing survey JSON: " + e.getMessage(), e);
         }
 
         String currentPrincipalName = authentication.getName();
@@ -147,7 +147,6 @@ public class SurveyController {
             return ResponseEntity.notFound().build();
         }
 
-        // Access control is handled by @PreAuthorize.
         Survey survey = surveyOptional.get();
         logger.info("User {} accessed survey: '{}' (ID: {}).", currentUsername, survey.getTitle(), surveyId);
         SurveyDTO surveyDTO = convertToSurveyDTO(survey);
@@ -172,10 +171,8 @@ public class SurveyController {
         Survey survey = surveyOptional.get();
         User userToShareWith = userToShareWithOptional.get();
 
-        // Check if sharing with self
-        if (survey.getOwner().getId().equals(userId)) {
-            logger.warn("Attempt to share survey ID {} with its owner (ID {}) - operation denied.", id, userId);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(convertToSurveyDTO(survey));
+        if (owner.getId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot share survey with oneself.");
         }
 
         if (survey.getSharedWithUsers().contains(userToShareWith)) {
@@ -183,8 +180,10 @@ public class SurveyController {
         } else {
             survey.getSharedWithUsers().add(userToShareWith);
             surveyRepository.save(survey);
-            logger.info("Survey ID {} successfully shared with user ID {}.", id, userId);
+        } else {
+            throw new ResourceNotFoundException("Survey or User to share with not found.");
         }
+        logger.info("Survey ID {} successfully shared with user ID {}.", id, userId);
         return ResponseEntity.ok(convertToSurveyDTO(survey));
     }
 
@@ -210,6 +209,7 @@ public class SurveyController {
             logger.info("Survey ID {} successfully unshared from user ID {}.", id, userId);
         } else {
             logger.info("Survey ID {} was not shared with user ID {} or already unshared.", id, userId);
+            throw new ResourceNotFoundException("Survey or User to unshare not found.");
         }
         return ResponseEntity.ok(convertToSurveyDTO(survey));
     }
