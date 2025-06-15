@@ -4,6 +4,7 @@ import mcc.survey.creator.dto.AdminResetPasswordRequest; // Import new DTO
 import mcc.survey.creator.dto.CreateUserRequest;
 import mcc.survey.creator.dto.EditUserRequest;
 import mcc.survey.creator.dto.UpdateUserStatusRequest;
+import mcc.survey.creator.exception.ResourceNotFoundException;
 import mcc.survey.creator.model.Role;
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.service.UserService;

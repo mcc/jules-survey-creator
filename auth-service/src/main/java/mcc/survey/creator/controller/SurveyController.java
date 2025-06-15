@@ -1,7 +1,8 @@
 package mcc.survey.creator.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mcc.survey.creator.dto.SurveyCreationRequestDTO;
 import mcc.survey.creator.dto.SurveyDTO; // Added
 import mcc.survey.creator.dto.UserDTO;   // Added
 import mcc.survey.creator.model.Survey;
@@ -64,7 +65,16 @@ public class SurveyController {
         dto.setId(survey.getId());
         dto.setTitle(survey.getTitle());
         dto.setDescription(survey.getDescription());
-        dto.setSurveyJson(survey.getSurveyJson()); // This holds the SurveyJS JSON definition
+    
+        try {
+            dto.setSurveyJson(new ObjectMapper().readTree(survey.getSurveyJson()));
+        } catch (JsonMappingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } // Ensure surveyJson is a String
         dto.setCreatedAt(survey.getCreatedAt());
         dto.setUpdatedAt(survey.getUpdatedAt());
         dto.setSurveyMode(survey.getSurveyMode());
@@ -160,21 +170,20 @@ public class SurveyController {
 
         Survey survey = surveyOptional.get();
         User userToShareWith = userToShareWithOptional.get();
-
-        if (owner.getId().equals(userId)) {
-            throw new IllegalArgumentException("Cannot share survey with oneself.");
-        }
-
-        if (survey.getSharedWithUsers().contains(userToShareWith)) {
-            logger.info("Survey ID {} is already shared with user ID {}.", id, userId);
-        } else {
-            survey.getSharedWithUsers().add(userToShareWith);
-            surveyRepository.save(survey);
-        } else {
+        if (userToShareWithOptional.isEmpty()){
             throw new ResourceNotFoundException("Survey or User to share with not found.");
+        } else {
+            if (survey.getSharedWithUsers().contains(userToShareWith)) {
+                logger.info("Survey ID {} is already shared with user ID {}.", id, userId);
+                throw new IllegalArgumentException("Survey already shared with this user.");
+            } else {
+                survey.getSharedWithUsers().add(userToShareWith);
+                surveyRepository.save(survey);
+
+                logger.info("Survey ID {} successfully shared with user ID {}.", id, userId);
+                return ResponseEntity.ok(convertToSurveyDTO(survey));
+            }
         }
-        logger.info("Survey ID {} successfully shared with user ID {}.", id, userId);
-        return ResponseEntity.ok(convertToSurveyDTO(survey));
     }
 
     @DeleteMapping("/{id}/unshare/{userId}")
@@ -208,7 +217,7 @@ public class SurveyController {
     @PreAuthorize("hasAuthority('OP_EDIT_OWN_SURVEY') and @surveySecurityService.isOwner(authentication, #surveyId)")
     public ResponseEntity<SurveyDTO> updateSurvey(@PathVariable Long surveyId,
                                                 @Valid @RequestBody SurveyDTO surveyDetailsDTO,
-                                                Authentication authentication) {
+                                                Authentication authentication) throws JsonProcessingException {
         String currentUsername = authentication.getName();
         logger.info("User {} attempting to update survey ID {}.", currentUsername, surveyId);
 
@@ -222,7 +231,8 @@ public class SurveyController {
         surveyToUpdate.setTitle(surveyDetailsDTO.getTitle());
         surveyToUpdate.setDescription(surveyDetailsDTO.getDescription());
         if (surveyDetailsDTO.getSurveyJson() != null) { // Ensure surveyJson is not accidentally nulled if not provided
-            surveyToUpdate.setSurveyJson(surveyDetailsDTO.getSurveyJson());
+            String surveyJsonString = new ObjectMapper().writeValueAsString(surveyDetailsDTO.getSurveyJson());
+            surveyToUpdate.setSurveyJson(surveyJsonString);
         }
         surveyToUpdate.setSurveyMode(surveyDetailsDTO.getSurveyMode());
         surveyToUpdate.setDataClassification(surveyDetailsDTO.getDataClassification());

@@ -130,7 +130,7 @@ function SurveyJsCreatorComponent({ json, options, onGetSurvey, onCreateSurvey, 
         const surveyData = {
             title: currentSurveyJsonAsObject.title || (currentSurveyJsonAsObject.pages && currentSurveyJsonAsObject.pages[0] && currentSurveyJsonAsObject.pages[0].title) || 'Untitled Survey', // Extract title
             description: currentSurveyJsonAsObject.description || (currentSurveyJsonAsObject.pages && currentSurveyJsonAsObject.pages[0] && currentSurveyJsonAsObject.pages[0].description) || '', // Extract description
-            surveyJson: JSON.stringify(currentSurveyJsonAsObject), // Stringify the SurveyJS JSON object
+            surveyJson: (currentSurveyJsonAsObject), // Stringify the SurveyJS JSON object
             surveyMode: surveyMode, // from local state
             dataClassification: dataClassification, // from local state
             status: status // from local state

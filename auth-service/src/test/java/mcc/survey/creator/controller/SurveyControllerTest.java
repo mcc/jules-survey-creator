@@ -1,5 +1,8 @@
 package mcc.survey.creator.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 // JsonNodeFactory and ObjectNode are no longer needed for request DTO
 import mcc.survey.creator.dto.SurveyDTO;
@@ -20,6 +23,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -52,7 +56,7 @@ public class SurveyControllerTest {
 
         // surveyJson is now a String directly in SurveyDTO
         String surveyJsonString = "{\"question\":\"What is your name?\"}";
-        dto.setSurveyJson(surveyJsonString);
+        dto.setSurveyJson(objectMapper.readTree(surveyJsonString));
 
         String username = "testuser";
         User owner = new User();
@@ -95,12 +99,12 @@ public class SurveyControllerTest {
     }
 
     @Test
-    void testCreateSurvey_UserNotFound() {
+    void testCreateSurvey_UserNotFound() throws JsonMappingException, JsonProcessingException {
         // Arrange
         SurveyDTO dto = new SurveyDTO(); // Changed from SurveyCreationRequestDTO to SurveyDTO
         dto.setTitle("Test Survey - User Not Found");
         // surveyJson is now a String directly in SurveyDTO
-        dto.setSurveyJson("{\"question\":\"Any question?\"}");
+        dto.setSurveyJson(this.objectMapper.readTree("{\"question\":\"Any question?\"}"));
 
         String username = "nonexistentuser";
         when(authentication.getName()).thenReturn(username);

@@ -10,6 +10,7 @@ import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
 import mcc.survey.creator.service.UserService; // Autowire this
+import mcc.survey.creator.exception.DuplicateResourceException;
 import mcc.survey.creator.exception.ResourceNotFoundException; // Import ResourceNotFoundException
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
