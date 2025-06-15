@@ -15,8 +15,6 @@ const LoginScreen = () => {
     setError(''); // Clear previous errors
     try {
       await login(username, password);
-      // navigate('/dashboard'); // Redirect to dashboard on successful login - This might be handled by AuthContext or App.jsx now
-                                // Let's assume successful login updates context and App.jsx handles navigation
     } catch (error) { // Renamed err to error for clarity
       console.error('Login failed:', error); // Keep for debugging
       // error.message should now contain the message from ErrorResponseDto or the standardized interceptor message
