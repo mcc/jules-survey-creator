@@ -51,9 +51,8 @@ public class SurveyController {
         try {
             survey.setSurveyJson(objectMapper.writeValueAsString(surveyDTO.getSurveyJson()));
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            // Handle exception, perhaps return a BAD_REQUEST response or throw a custom exception
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            // Let GlobalExceptionHandler handle this as a generic Exception or a specific one if defined
+            throw new RuntimeException("Error processing survey JSON: " + e.getMessage(), e);
         }
 
         String currentPrincipalName = authentication.getName();
@@ -89,7 +88,7 @@ public class SurveyController {
 
         return surveyOptional
                 .map(survey -> new ResponseEntity<>(survey, HttpStatus.OK))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseThrow(() -> new ResourceNotFoundException("Survey not found with ID: " + surveyId + " for user: " + userId));
     }
 
     @PostMapping("/{id}/share/{userId}")
@@ -107,14 +106,14 @@ public class SurveyController {
 
             // Prevent sharing with oneself
             if (owner.getId().equals(userId)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+                throw new IllegalArgumentException("Cannot share survey with oneself.");
             }
 
             survey.getSharedWithUsers().add(userToShareWith);
             surveyRepository.save(survey);
             return ResponseEntity.ok(survey);
         } else {
-            return ResponseEntity.notFound().build();
+            throw new ResourceNotFoundException("Survey or User to share with not found.");
         }
     }
 
@@ -133,7 +132,7 @@ public class SurveyController {
             surveyRepository.save(survey);
             return ResponseEntity.ok(survey);
         } else {
-            return ResponseEntity.notFound().build();
+            throw new ResourceNotFoundException("Survey or User to unshare not found.");
         }
     }
 

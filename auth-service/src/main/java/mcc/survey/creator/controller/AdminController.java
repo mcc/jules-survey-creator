@@ -44,13 +44,12 @@ public class AdminController {
     @PostMapping("/users")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<?> createUser(@Valid @RequestBody CreateUserRequest createUserRequest) {
-        try {
-            User newUser = userService.createUser(createUserRequest);
-            // Consider returning a UserResponse DTO instead of the User entity for security/consistency
-            return ResponseEntity.ok(newUser);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        // RuntimeExceptions from service (like "Username already taken", "Email already in use", "Role not found")
+        // will be caught by GlobalExceptionHandler if they are of types like DuplicateResourceException or IllegalArgumentException.
+        // Assuming userService.createUser throws appropriate exceptions.
+        User newUser = userService.createUser(createUserRequest);
+        // Consider returning a UserResponse DTO instead of the User entity for security/consistency
+        return ResponseEntity.ok(newUser);
     }
 
     @GetMapping("/users")
@@ -64,21 +63,22 @@ public class AdminController {
     @GetMapping("/users/{userId}")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<?> getUserById(@PathVariable Long userId) {
-        return userService.getUserById(userId)
-                .map(ResponseEntity::ok) // Consider mapping to UserResponse
-                .orElse(ResponseEntity.notFound().build());
+        User user = userService.getUserById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+        // Consider mapping to UserResponse
+        return ResponseEntity.ok(user);
     }
 
     @PutMapping("/users/{userId}")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<?> editUser(@PathVariable Long userId, @Valid @RequestBody EditUserRequest editUserRequest) {
-        try {
-            return userService.editUser(userId, editUserRequest)
-                    .map(ResponseEntity::ok) // Consider mapping to UserResponse
-                    .orElse(ResponseEntity.notFound().build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        // RuntimeExceptions from service (like "Username already taken", "Email already in use", "Role not found")
+        // will be caught by GlobalExceptionHandler if they are of types like DuplicateResourceException or IllegalArgumentException.
+        // Assuming userService.editUser throws appropriate exceptions for not found or other issues.
+        User updatedUser = userService.editUser(userId, editUserRequest)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId + " for update."));
+        // Consider mapping to UserResponse
+        return ResponseEntity.ok(updatedUser);
     }
 
     // Changed endpoint from /users/{username}/reset-password to /users/reset-password
@@ -99,18 +99,21 @@ public class AdminController {
             // For now, a generic failure message for this controller endpoint.
             // Check if user exists first to give a more specific error for "user not found"
             if (userService.findByName(request.getUsername()) == null) {
-                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found: " + request.getUsername());
+                 throw new ResourceNotFoundException("User not found: " + request.getUsername());
             }
             // If user exists, failure is likely due to password policy (logged by service)
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password reset failed for user: " + request.getUsername() + ". This could be due to a password policy violation or other server-side issue.");
+            // The service method already returns boolean, so a specific exception for policy failure might be better from service.
+            // For now, let's assume it might throw IllegalArgumentException for policy.
+            throw new IllegalArgumentException("Password reset failed for user: " + request.getUsername() + ". This could be due to a password policy violation or other server-side issue.");
         }
     }
 
     @PutMapping("/users/{userId}/status")
     @PreAuthorize("hasRole('USER_ADMIN') or hasRole('SYSTEM_ADMIN')")
     public ResponseEntity<?> setUserStatus(@PathVariable Long userId, @Valid @RequestBody UpdateUserStatusRequest statusRequest) {
-        return userService.setUserStatus(userId, statusRequest.getIsActive())
-                .map(user -> ResponseEntity.ok("User status updated successfully for user ID: " + userId + ". New status: " + user.isActive())) // Consider returning updated user DTO
-                .orElse(ResponseEntity.notFound().build());
+        User updatedUser = userService.setUserStatus(userId, statusRequest.getIsActive())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId + " for status update."));
+        // Consider returning updated user DTO
+        return ResponseEntity.ok("User status updated successfully for user ID: " + userId + ". New status: " + updatedUser.isActive());
     }
 }

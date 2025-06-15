@@ -7,7 +7,7 @@ import mcc.survey.creator.model.User;
 import mcc.survey.creator.model.Role; // Assuming Role enum/class exists
 import mcc.survey.creator.repository.RoleRepository;
 import mcc.survey.creator.repository.UserRepository;
-import mcc.survey.creator.util.ResourceNotFoundException; // Assuming this exception class exists or will be created
+import mcc.survey.creator.exception.ResourceNotFoundException; // Assuming this exception class exists or will be created
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
