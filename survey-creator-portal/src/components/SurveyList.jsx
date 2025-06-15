@@ -6,12 +6,16 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PublishIcon from '@mui/icons-material/Publish';
 import UnpublishedIcon from '@mui/icons-material/Unpublished';
+import ShareIcon from '@mui/icons-material/Share';
+import ShareSurveyDialog from './ShareSurveyDialog';
 
 const SurveyList = () => {
   const navigate = useNavigate();
   const [surveys, setSurveys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedSurveyId, setSelectedSurveyId] = useState(null);
 
   // Mock userId - in a real app, this would come from an auth context
   const userId = 'user1';
@@ -34,6 +38,16 @@ const SurveyList = () => {
 
     fetchSurveys();
   }, [userId]);
+
+  const handleShareClick = (surveyId) => {
+    setSelectedSurveyId(surveyId);
+    setShareDialogOpen(true);
+  };
+
+  const handleShareDialogClose = () => {
+    setShareDialogOpen(false);
+    setSelectedSurveyId(null);
+  };
 
   return (
     <Paper elevation={3} sx={{ p: 3, m: 2 }}>
@@ -61,6 +75,9 @@ const SurveyList = () => {
                   <IconButton edge="end" aria-label="edit" sx={{ mr: 1 }} onClick={() => navigate(`/survey-creator/${survey.id}`)}>
                     <EditIcon />
                   </IconButton>
+                  <IconButton edge="end" aria-label="share" sx={{ mr: 1 }} onClick={() => handleShareClick(survey.id)}>
+                    <ShareIcon />
+                  </IconButton>
                   <IconButton edge="end" aria-label={survey.status === 'draft' ? 'publish' : 'unpublish'} sx={{ mr: 1 }}>
                     {survey.status === 'draft' ? <PublishIcon /> : <UnpublishedIcon />}
                   </IconButton>
@@ -77,6 +94,13 @@ const SurveyList = () => {
             </ListItem>
           ))}
         </List>
+      )}
+      {selectedSurveyId && (
+        <ShareSurveyDialog
+          open={shareDialogOpen}
+          onClose={handleShareDialogClose}
+          surveyId={selectedSurveyId}
+        />
       )}
     </Paper>
   );
