@@ -3,6 +3,7 @@ package mcc.survey.creator.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.sql.Timestamp;
 import java.util.Set;
@@ -14,7 +15,7 @@ public class SurveyDTO {
     private Long id;
     private String title;
     private String description;
-    private String surveyJson;
+    private com.fasterxml.jackson.databind.JsonNode surveyJson;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private String surveyMode;
