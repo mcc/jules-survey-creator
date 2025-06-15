@@ -2,7 +2,7 @@ package mcc.survey.creator.service;
 
 import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
-import mcc.survey.creator.util.ResourceNotFoundException;
+import mcc.survey.creator.exception.ResourceNotFoundException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

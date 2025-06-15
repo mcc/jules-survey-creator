@@ -10,7 +10,7 @@ import mcc.survey.creator.model.User;
 import mcc.survey.creator.repository.UserRepository;
 import mcc.survey.creator.security.JwtTokenProvider;
 import mcc.survey.creator.service.UserService; // Autowire this
-import mcc.survey.creator.util.ResourceNotFoundException; // Import ResourceNotFoundException
+import mcc.survey.creator.exception.ResourceNotFoundException; // Import ResourceNotFoundException
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -52,38 +52,35 @@ public class AuthController { // Renaming to UserController or creating a new on
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-            org.springframework.security.core.userdetails.User principal = (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
-            Optional<User> userOptional = userRepository.findByUsername(principal.getUsername());
+        org.springframework.security.core.userdetails.User principal = (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
+        Optional<User> userOptional = userRepository.findByUsername(principal.getUsername());
 
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-                if (user.getPasswordExpirationDate() != null &&
-                    (user.getPasswordExpirationDate().isBefore(LocalDate.now()) || user.getPasswordExpirationDate().isEqual(LocalDate.now()))) {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: Your password has expired. Please change your password.");
-                }
-            } else {
-                // This case should ideally not happen if authentication was successful
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: User details not found after authentication.");
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            if (user.getPasswordExpirationDate() != null &&
+                (user.getPasswordExpirationDate().isBefore(LocalDate.now()) || user.getPasswordExpirationDate().isEqual(LocalDate.now()))) {
+                // Consider throwing a custom PasswordExpiredException extending AuthenticationException
+                throw new AuthenticationException("Error: Your password has expired. Please change your password.") {};
             }
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            String jwt = jwtTokenProvider.generateToken(authentication);
-            String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
-
-            return ResponseEntity.ok(new JwtResponse(jwt, refreshToken));
-        } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: Invalid credentials");
+        } else {
+            // This case should ideally not happen if authentication was successful
+            throw new IllegalStateException("User details not found after authentication.");
         }
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtTokenProvider.generateToken(authentication);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
+
+        return ResponseEntity.ok(new JwtResponse(jwt, refreshToken));
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignUpRequest signUpRequest) {
         if (userRepository.findByUsername(signUpRequest.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Error: Username is already taken!");
+            throw new DuplicateResourceException("Error: Username is already taken!");
         }
 
         User user = new User();
@@ -126,7 +123,7 @@ public class AuthController { // Renaming to UserController or creating a new on
             // return ResponseEntity.ok(new JwtResponse(newAccessToken, newRefreshToken));
             return ResponseEntity.ok(new JwtResponse(newAccessToken, requestRefreshToken));
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+            throw new AuthenticationException("Invalid refresh token") {};
         }
     }
 
@@ -163,33 +160,24 @@ public class AuthController { // Renaming to UserController or creating a new on
             User user = userOptional.get();
             return ResponseEntity.ok(new UserSummaryDTO(user.getId(), user.getUsername()));
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            throw new ResourceNotFoundException("User not found");
         }
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
-        try {
-            userService.initiatePasswordReset(request.getEmail());
-            return ResponseEntity.ok("Password reset email sent. Please check your inbox.");
-        } catch (ResourceNotFoundException e) {
-            // Even if user is not found, we might want to return a generic success message
-            // to prevent email enumeration attacks.
-            // However, the current userService.initiatePasswordReset logs and returns void if not found.
-            // For more explicit client feedback (and if not concerned about enumeration):
-            // return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            return ResponseEntity.ok("If your email is registered, you will receive a password reset link.");
-        } catch (Exception e) {
-            // Log the exception e
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error initiating password reset.");
-        }
+        userService.initiatePasswordReset(request.getEmail());
+        // The service currently doesn't throw ResourceNotFoundException directly in a way that
+        // would prevent this line from being reached if user not found.
+        // It logs and returns void. If it were to throw, GlobalExceptionHandler would handle it.
+        return ResponseEntity.ok("If your email is registered, you will receive a password reset link.");
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto request) {
         if (request.getToken() == null || request.getToken().isEmpty() ||
             request.getNewPassword() == null || request.getNewPassword().isEmpty()) {
-            return ResponseEntity.badRequest().body("Token and new password must be provided.");
+            throw new IllegalArgumentException("Token and new password must be provided.");
         }
 
         boolean result = userService.completePasswordReset(request.getToken(), request.getNewPassword());
@@ -197,8 +185,9 @@ public class AuthController { // Renaming to UserController or creating a new on
         if (result) {
             return ResponseEntity.ok("Password has been reset successfully.");
         } else {
-            // More specific errors could be returned from the service layer if needed
-            return ResponseEntity.badRequest().body("Invalid or expired token, or password could not be reset.");
+            // Assuming service layer would throw for specific failures if this path is taken.
+            // Or, this could indicate a scenario not covered by specific exceptions yet from service.
+            throw new IllegalArgumentException("Invalid or expired token, or password could not be reset.");
         }
     }
 
@@ -209,37 +198,15 @@ public class AuthController { // Renaming to UserController or creating a new on
     @PostMapping("/users/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest, Authentication authentication) { // Added @Valid
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: User is not authenticated.");
-        }
         String username = authentication.getName();
 
-        // The @Valid annotation on ChangePasswordRequest should handle cases like empty newPassword
-        // if the DTO has appropriate validation annotations (e.g., @NotEmpty, @Size).
-        // If ChangePasswordRequest DTO doesn't have such annotations, the explicit null/empty check can remain,
-        // or preferably, add validation annotations to the DTO.
-        // For now, assuming @Valid might not cover all desired checks or DTO is not yet annotated for this.
-        if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isEmpty()) {
-             return ResponseEntity.badRequest().body("Error: New password cannot be empty.");
-        }
-        // Example of an additional check (can be removed if DTO validation is comprehensive)
-        // if (changePasswordRequest.getOldPassword() == null || changePasswordRequest.getOldPassword().isEmpty()) {
-        //     return ResponseEntity.badRequest().body("Error: Old password cannot be empty.");
+        // @Valid on ChangePasswordRequest + DTO annotations (e.g. @NotEmpty) should handle this.
+        // If not, or for more specific controller-level check not suitable for DTO:
+        // if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isEmpty()) {
+        //     throw new IllegalArgumentException("Error: New password cannot be empty.");
         // }
 
-        try {
-            userService.changePassword(username, changePasswordRequest.getOldPassword(), changePasswordRequest.getNewPassword());
-            return ResponseEntity.ok(new MessageResponseDto("Password changed successfully.")); // Using a DTO for response consistency
-        } catch (ResourceNotFoundException e) { // Catching specific expected exceptions
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponseDto("Error: " + e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new MessageResponseDto("Error: " + e.getMessage()));
-        } catch (RuntimeException e) { // Catch-all for other unexpected runtime exceptions
-            // Log the exception server-side for more details
-            // log.error("Error changing password for user {}: {}", username, e.getMessage(), e); // Example logging
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new MessageResponseDto("Error: An unexpected error occurred while changing password."));
-        }
-      
-      
+        userService.changePassword(username, changePasswordRequest.getOldPassword(), changePasswordRequest.getNewPassword());
+        return ResponseEntity.ok(new MessageResponseDto("Password changed successfully."));
     }
 }

@@ -90,8 +90,13 @@ public class SurveyController {
         survey.setSurveyMode(surveyDTO.getSurveyMode());
         survey.setDataClassification(surveyDTO.getDataClassification());
         survey.setStatus(surveyDTO.getStatus());
-        // surveyJson is now directly a String in SurveyDTO, so no conversion is needed.
-        survey.setSurveyJson(surveyDTO.getSurveyJson());
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            survey.setSurveyJson(objectMapper.writeValueAsString(surveyDTO.getSurveyJson()));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            // Let GlobalExceptionHandler handle this as a generic Exception or a specific one if defined
+            throw new RuntimeException("Error processing survey JSON: " + e.getMessage(), e);
+        }
 
         String currentPrincipalName = authentication.getName();
         User user = userRepository.findByUsername(currentPrincipalName)
@@ -132,7 +137,6 @@ public class SurveyController {
             return ResponseEntity.notFound().build();
         }
 
-        // Access control is handled by @PreAuthorize.
         Survey survey = surveyOptional.get();
         logger.info("User {} accessed survey: '{}' (ID: {}).", currentUsername, survey.getTitle(), surveyId);
         SurveyDTO surveyDTO = convertToSurveyDTO(survey);
@@ -157,10 +161,8 @@ public class SurveyController {
         Survey survey = surveyOptional.get();
         User userToShareWith = userToShareWithOptional.get();
 
-        // Check if sharing with self
-        if (survey.getOwner().getId().equals(userId)) {
-            logger.warn("Attempt to share survey ID {} with its owner (ID {}) - operation denied.", id, userId);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(convertToSurveyDTO(survey));
+        if (owner.getId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot share survey with oneself.");
         }
 
         if (survey.getSharedWithUsers().contains(userToShareWith)) {
@@ -168,8 +170,10 @@ public class SurveyController {
         } else {
             survey.getSharedWithUsers().add(userToShareWith);
             surveyRepository.save(survey);
-            logger.info("Survey ID {} successfully shared with user ID {}.", id, userId);
+        } else {
+            throw new ResourceNotFoundException("Survey or User to share with not found.");
         }
+        logger.info("Survey ID {} successfully shared with user ID {}.", id, userId);
         return ResponseEntity.ok(convertToSurveyDTO(survey));
     }
 
@@ -195,6 +199,7 @@ public class SurveyController {
             logger.info("Survey ID {} successfully unshared from user ID {}.", id, userId);
         } else {
             logger.info("Survey ID {} was not shared with user ID {} or already unshared.", id, userId);
+            throw new ResourceNotFoundException("Survey or User to unshare not found.");
         }
         return ResponseEntity.ok(convertToSurveyDTO(survey));
     }
