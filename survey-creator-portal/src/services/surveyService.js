@@ -14,6 +14,31 @@ export const getSurveysByUser = async (userId) => {
   }
 };
 
+// New function to get a list of users a survey is shared with
+export const getSharedUsers = async (surveyId) => {
+  // Mock implementation for now
+  console.log(`Fetching shared users for survey ID: ${surveyId}`);
+  return Promise.resolve([
+    { id: 'user1', name: 'User One', email: 'user.one@example.com' },
+    { id: 'user2', name: 'User Two', email: 'user.two@example.com' },
+    { id: 'user3', name: 'User Three', email: 'user.three@example.com' },
+  ]);
+};
+
+// New function to share a survey with a user by their ID
+export const shareSurveyWithUser = async (surveyId, userId) => {
+  // Mock implementation for now
+  console.log(`Sharing survey ID: ${surveyId} with user ID: ${userId}`);
+  return Promise.resolve({ message: `Survey ${surveyId} shared with user ${userId} successfully.` });
+};
+
+// New function to unshare a survey from a user by their ID
+export const unshareSurveyWithUser = async (surveyId, userId) => {
+  // Mock implementation for now
+  console.log(`Unsharing survey ID: ${surveyId} from user ID: ${userId}`);
+  return Promise.resolve({ message: `Survey ${surveyId} unshared from user ${userId} successfully.` });
+};
+
 // Fetches survey details, which should include shared users
 export const fetchSharedUsers = async (surveyId) => {
   try {
